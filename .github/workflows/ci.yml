@@ -1,0 +1,40 @@
+name: CI / Verification Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  verify:
+    name: Lint, Test, Typecheck & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Local SQLite Dev DB & Seed
+        run: npm run db:sqlite
+
+      - name: Run Vitest Operational Test Suite
+        run: npm test
+
+      - name: Typecheck TypeScript
+        run: npm run typecheck
+
+      - name: Build Next.js Production Bundle
+        run: npm run build
+        env:
+          DATABASE_URL: "file:./dev.db"
+          AUTH_SECRET: "ci-pipeline-test-auth-secret-minimum-32-characters"

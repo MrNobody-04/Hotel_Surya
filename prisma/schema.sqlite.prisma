@@ -1,0 +1,193 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         String    @default("RECEPTIONIST")
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  staysCreated  Stay[]       @relation("StayCreatedBy")
+  payments      Payment[]    @relation("PaymentRecordedBy")
+  expenses      Expense[]    @relation("ExpenseCreatedBy")
+  auditLogs     AuditLog[]   @relation("UserAuditLogs")
+  billItems     BillItem[]   @relation("BillItemCreatedBy")
+
+  @@index([email])
+}
+
+model Room {
+  id         String     @id @default(cuid())
+  roomNumber String     @unique
+  type       String     @default("NON_AC")
+  status     String     @default("AVAILABLE")
+  notes      String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  stays Stay[]
+
+  @@index([roomNumber])
+  @@index([status])
+}
+
+model Customer {
+  id                  String   @id @default(cuid())
+  fullName            String
+  gender              String   @default("PREFER_NOT_TO_SAY")
+  citizenshipNumber   String?
+  citizenshipPhotoUrl String?
+  contactNumber       String
+  address             String?
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  stays Stay[]
+
+  @@index([fullName])
+  @@index([contactNumber])
+  @@index([citizenshipNumber])
+}
+
+model AccompanyingGuest {
+  id        String   @id @default(cuid())
+  stayId    String
+  stay      Stay     @relation(fields: [stayId], references: [id], onDelete: Cascade)
+  fullName  String
+  gender    String   @default("PREFER_NOT_TO_SAY")
+  createdAt DateTime @default(now())
+
+  @@index([stayId])
+}
+
+model Stay {
+  id                   String     @id @default(cuid())
+  customerId           String
+  customer             Customer   @relation(fields: [customerId], references: [id])
+  roomId               String
+  room                 Room       @relation(fields: [roomId], references: [id])
+  numberOfPeople       Int        @default(1)
+  expectedCheckoutDate DateTime
+  checkInAt            DateTime   @default(now())
+  checkoutAt           DateTime?
+  roomPrice            Float
+  status               String     @default("ACTIVE")
+  notes                String?
+
+  createdById          String
+  createdBy            User       @relation("StayCreatedBy", fields: [createdById], references: [id])
+
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  accompanyingGuests   AccompanyingGuest[]
+  billItems            BillItem[]
+  payments             Payment[]
+
+  @@index([customerId])
+  @@index([roomId])
+  @@index([status])
+  @@index([checkInAt])
+  @@index([checkoutAt])
+}
+
+model BillItem {
+  id          String           @id @default(cuid())
+  stayId      String
+  stay        Stay             @relation(fields: [stayId], references: [id], onDelete: Cascade)
+  category    String           @default("OTHER")
+  name        String
+  quantity    Int              @default(1)
+  unitPrice   Float
+  total       Float
+  notes       String?
+
+  createdById String?
+  createdBy   User?            @relation("BillItemCreatedBy", fields: [createdById], references: [id])
+
+  createdAt   DateTime         @default(now())
+
+  @@index([stayId])
+  @@index([category])
+}
+
+model ServiceItem {
+  id           String           @id @default(cuid())
+  name         String           @unique
+  category     String           @default("OTHER")
+  defaultPrice Float
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([category])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  stayId         String
+  stay           Stay          @relation(fields: [stayId], references: [id], onDelete: Cascade)
+  amount         Float
+  method         String        @default("CASH")
+  timestamp      DateTime      @default(now())
+  notes          String?
+  idempotencyKey String?       @unique
+
+  recordedById   String?
+  recordedBy     User?         @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
+
+  createdAt      DateTime      @default(now())
+
+  @@index([stayId])
+  @@index([timestamp])
+  @@index([method])
+}
+
+model Expense {
+  id            String          @id @default(cuid())
+  title         String
+  amount        Float
+  category      String          @default("OTHER")
+  date          DateTime        @default(now())
+  paymentMethod String          @default("CASH")
+  notes         String?
+  receiptUrl    String?
+
+  createdById   String
+  createdBy     User            @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([date])
+  @@index([category])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: SetNull)
+  userName  String
+  action    String
+  entity    String
+  entityId  String?
+  metadata  String?  // JSON string
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([action])
+  @@index([entity])
+  @@index([userId])
+}
