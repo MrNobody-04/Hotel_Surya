@@ -11,6 +11,10 @@ const itemSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
+const batchSchema = z.object({
+  items: z.array(itemSchema).min(1, "At least one item is required"),
+});
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -20,6 +24,31 @@ export async function POST(
     const { id } = await params;
     const body = await request.json();
 
+    // Support batch adding multiple items at once
+    if (body.items && Array.isArray(body.items)) {
+      const parsed = batchSchema.safeParse(body);
+      if (!parsed.success) {
+        return NextResponse.json(
+          { error: parsed.error.issues[0].message },
+          { status: 400 }
+        );
+      }
+
+      const createdItems = [];
+      for (const itemData of parsed.data.items) {
+        const item = await addBillItem({
+          stayId: id,
+          ...itemData,
+          userId: user.id,
+          userName: user.name,
+        });
+        createdItems.push(item);
+      }
+
+      return NextResponse.json({ success: true, items: createdItems });
+    }
+
+    // Single item fallback for backward compatibility
     const parsed = itemSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(

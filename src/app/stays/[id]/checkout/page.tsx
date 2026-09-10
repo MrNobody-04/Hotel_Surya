@@ -14,6 +14,8 @@ import {
   ArrowLeft,
   Receipt,
   ShieldAlert,
+  QrCode,
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -24,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCurrency, formatNepalDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { PaymentMethod, StayDTO } from "@/types";
+import { PaymentQrModal } from "@/components/billing/payment-qr-modal";
 
 export default function CheckoutPage({
   params,
@@ -41,6 +44,7 @@ export default function CheckoutPage({
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
   const [paymentNotes, setPaymentNotes] = useState("Final checkout settlement");
+  const [showQrModal, setShowQrModal] = useState(false);
 
   // Admin override state
   const [showOverride, setShowOverride] = useState(false);
@@ -285,9 +289,24 @@ export default function CheckoutPage({
           {/* Outstanding Balance Settlement Section */}
           {calc.outstandingBalance > 0 && (
             <div className="p-4 border-2 border-amber-500/40 bg-amber-500/5 rounded-xl space-y-3">
-              <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-sm">
-                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-                <span>Outstanding Balance Payment Required</span>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-amber-900 dark:text-amber-200 font-bold text-sm">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                  <span>Outstanding Balance Payment Required</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setPaymentMethod("QR_PAYMENT");
+                    setShowQrModal(true);
+                  }}
+                  className="text-xs h-7 gap-1.5 border-emerald-600/30 text-emerald-700 dark:text-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 dark:bg-emerald-950/30"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Show Nabil QR</span>
+                </Button>
               </div>
 
               <p className="text-xs text-muted-foreground">
@@ -322,7 +341,7 @@ export default function CheckoutPage({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="CASH">Cash</SelectItem>
-                      <SelectItem value="QR_PAYMENT">Fonepay / QR Payment</SelectItem>
+                      <SelectItem value="QR_PAYMENT">Fonepay / QR Payment (Nabil Bank)</SelectItem>
                       <SelectItem value="BANK_TRANSFER">Bank Transfer / ConnectIPS</SelectItem>
                       <SelectItem value="CARD">Debit / Credit Card</SelectItem>
                       <SelectItem value="OTHER">Other</SelectItem>
@@ -330,6 +349,56 @@ export default function CheckoutPage({
                   </Select>
                 </div>
               </div>
+
+              {/* Nabil QR Payment Quick Card when QR_PAYMENT is selected */}
+              {paymentMethod === "QR_PAYMENT" && (
+                <div className="p-3 bg-background border-2 border-emerald-500/40 rounded-xl flex items-center justify-between gap-3 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowQrModal(true)}
+                      className="w-14 h-14 bg-white p-1 rounded-lg border border-emerald-500/30 shadow-sm shrink-0 hover:scale-105 transition-transform"
+                      title="Click to view full QR"
+                    >
+                      <img
+                        src="/images/nabil-qr.jpg"
+                        alt="Nabil Bank QR"
+                        className="w-full h-full object-contain rounded"
+                      />
+                    </button>
+                    <div className="text-xs space-y-0.5">
+                      <div className="font-bold text-emerald-700 dark:text-emerald-400">
+                        Nabil Bank QR (SUJAN G.C.)
+                      </div>
+                      <div className="font-mono font-bold text-foreground flex items-center gap-1">
+                        <span>A/C: 27710017501941</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 px-1 text-[10px]"
+                          onClick={() => {
+                            navigator.clipboard.writeText("27710017501941");
+                            toast.success("Account number copied!");
+                          }}
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowQrModal(true)}
+                    className="text-xs h-8 gap-1.5 shrink-0 border-emerald-600 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                  >
+                    <QrCode className="w-3.5 h-3.5" />
+                    <span>View QR</span>
+                  </Button>
+                </div>
+              )}
 
               {/* Admin Override Accordion */}
               <div className="pt-2">
@@ -388,6 +457,14 @@ export default function CheckoutPage({
           </Button>
         </CardFooter>
       </Card>
+
+      <PaymentQrModal
+        open={showQrModal}
+        onOpenChange={setShowQrModal}
+        dueAmount={Number(paymentAmount) || calc.outstandingBalance}
+        roomNumber={stay?.room?.roomNumber}
+        guestName={stay?.customer?.fullName}
+      />
     </div>
   );
 }

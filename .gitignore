@@ -12,6 +12,7 @@
 
 # Production
 /build
+*.tsbuildinfo
 
 # Local Environment Variables & Secrets
 .env

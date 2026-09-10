@@ -18,16 +18,19 @@ import {
   Utensils,
   CheckCircle2,
   RefreshCw,
+  QrCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatNepalDateTime } from "@/lib/utils";
 import { toast } from "sonner";
+import { PaymentQrModal } from "@/components/billing/payment-qr-modal";
 
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   const fetchDashboard = async () => {
     try {
@@ -86,6 +89,15 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowQrModal(true)}
+            className="h-9 gap-1.5 border-emerald-600/30 text-emerald-700 dark:text-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 dark:bg-emerald-950/30"
+          >
+            <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Payment QR</span>
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -263,7 +275,7 @@ export default function DashboardPage() {
 
       {/* Outstanding Balances Warning Banner (if any) */}
       {financialOverview.outstandingPayments > 0 && (
-        <div className="flex items-center justify-between p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-sm">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
             <div>
@@ -275,11 +287,22 @@ export default function DashboardPage() {
               </p>
             </div>
           </div>
-          <Link href="/guests">
-            <Button size="sm" variant="outline" className="border-amber-500/40 text-xs">
-              View Guests
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowQrModal(true)}
+              className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-xs font-semibold gap-1.5"
+            >
+              <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Scan QR to Settle</span>
             </Button>
-          </Link>
+            <Link href="/guests">
+              <Button size="sm" variant="outline" className="border-amber-500/40 text-xs">
+                View Guests
+              </Button>
+            </Link>
+          </div>
         </div>
       )}
 
@@ -392,6 +415,12 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      <PaymentQrModal
+        open={showQrModal}
+        onOpenChange={setShowQrModal}
+        dueAmount={financialOverview?.outstandingPayments || 0}
+      />
     </div>
   );
 }

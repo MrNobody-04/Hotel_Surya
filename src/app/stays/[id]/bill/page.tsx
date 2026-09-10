@@ -20,6 +20,9 @@ import {
   Calendar,
   AlertTriangle,
   RefreshCw,
+  QrCode,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -31,6 +34,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCurrency, formatNepalDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { BillItemCategory, PaymentMethod, StayDTO } from "@/types";
+import { PaymentQrModal } from "@/components/billing/payment-qr-modal";
 
 export default function StayBillPage({
   params,
@@ -46,15 +50,20 @@ export default function StayBillPage({
   // Catalog items for quick selection
   const [catalogItems, setCatalogItems] = useState<any[]>([]);
 
-  // Add Item Modal
+  // Add Items Modal (Supports batch adding multiple items at once)
   const [itemModalOpen, setItemModalOpen] = useState(false);
-  const [itemCategory, setItemCategory] = useState<BillItemCategory>("FOOD");
-  const [selectedCatalogItem, setSelectedCatalogItem] = useState("");
-  const [itemName, setItemName] = useState("");
-  const [itemQuantity, setItemQuantity] = useState<number>(1);
-  const [itemUnitPrice, setItemUnitPrice] = useState<string>("180");
-  const [itemNotes, setItemNotes] = useState("");
+  const [itemsList, setItemsList] = useState<Array<{
+    id: string;
+    category: BillItemCategory;
+    name: string;
+    quantity: string;
+    unitPrice: string;
+    notes?: string;
+  }>>([{ id: "1", category: "FOOD", name: "", quantity: "1", unitPrice: "", notes: "" }]);
   const [addingItem, setAddingItem] = useState(false);
+
+  // Payment QR Modal
+  const [qrModalOpen, setQrModalOpen] = useState(false);
 
   // Record Payment Modal
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -97,52 +106,114 @@ export default function StayBillPage({
     fetchCatalog();
   }, [id]);
 
-  // When catalog item selected, auto-fill unit price and name
-  const handleSelectCatalogItem = (catalogId: string) => {
-    setSelectedCatalogItem(catalogId);
-    const item = catalogItems.find((ci) => ci.id === catalogId);
-    if (item) {
-      setItemName(item.name);
-      setItemUnitPrice(String(item.defaultPrice));
-    }
+  // Batch Bill Item Helpers
+  const createDefaultRow = (cat: BillItemCategory = "FOOD") => ({
+    id: Math.random().toString(36).substring(2, 9),
+    category: cat,
+    name: "",
+    quantity: "1",
+    unitPrice: "",
+    notes: "",
+  });
+
+  const handleAddCatalogItemToBatch = (ci: { name: string; category?: string; defaultPrice: number }) => {
+    setItemsList((prev) => {
+      const last = prev[prev.length - 1];
+      if (last && !last.name.trim() && !last.unitPrice) {
+        return [
+          ...prev.slice(0, -1),
+          {
+            ...last,
+            category: (ci.category as BillItemCategory) || "FOOD",
+            name: ci.name,
+            quantity: "1",
+            unitPrice: String(ci.defaultPrice),
+          },
+        ];
+      }
+      return [
+        ...prev,
+        {
+          id: Math.random().toString(36).substring(2, 9),
+          category: (ci.category as BillItemCategory) || "FOOD",
+          name: ci.name,
+          quantity: "1",
+          unitPrice: String(ci.defaultPrice),
+          notes: "",
+        },
+      ];
+    });
   };
 
-  // Add Item Handler
-  const handleAddItem = async (e: React.FormEvent) => {
+  const handleUpdateItemRow = (rowId: string, field: string, value: any) => {
+    setItemsList((prev) =>
+      prev.map((r) => (r.id === rowId ? { ...r, [field]: value } : r))
+    );
+  };
+
+  const handleAddEmptyRow = () => {
+    setItemsList((prev) => [...prev, createDefaultRow()]);
+  };
+
+  const handleRemoveRow = (rowId: string) => {
+    setItemsList((prev) => {
+      const filtered = prev.filter((r) => r.id !== rowId);
+      return filtered.length > 0 ? filtered : [createDefaultRow()];
+    });
+  };
+
+  const batchTotal = itemsList.reduce((sum, item) => {
+    const q = Math.max(1, parseInt(item.quantity) || 1);
+    const p = Math.max(0, Number(item.unitPrice) || 0);
+    return sum + q * p;
+  }, 0);
+
+  // Batch Add Items Handler
+  const handleAddBatchItems = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!itemName.trim()) {
-      toast.error("Item name is required");
+    const validRows = itemsList.filter((r) => r.name.trim() || Number(r.unitPrice) > 0);
+    if (validRows.length === 0) {
+      toast.error("Please add at least one item with a name and price");
       return;
     }
 
-    const unitPriceNum = Number(itemUnitPrice);
-    if (isNaN(unitPriceNum) || unitPriceNum < 0) {
-      toast.error("Valid unit price is required");
-      return;
+    for (let i = 0; i < validRows.length; i++) {
+      const r = validRows[i];
+      if (!r.name.trim()) {
+        toast.error(`Item #${i + 1} is missing a name`);
+        return;
+      }
+      const price = Number(r.unitPrice);
+      if (isNaN(price) || price < 0) {
+        toast.error(`Item #${i + 1} (${r.name}) has an invalid unit price`);
+        return;
+      }
     }
 
     setAddingItem(true);
     try {
+      const payload = {
+        items: validRows.map((r) => ({
+          category: r.category,
+          name: r.name.trim(),
+          quantity: Math.max(1, parseInt(r.quantity) || 1),
+          unitPrice: Number(r.unitPrice),
+          notes: r.notes?.trim() || null,
+        })),
+      };
+
       const res = await fetch(`/api/stays/${id}/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          category: itemCategory,
-          name: itemName.trim(),
-          quantity: itemQuantity,
-          unitPrice: unitPriceNum,
-          notes: itemNotes || null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to add item");
+      if (!res.ok) throw new Error(data.error || "Failed to add items");
 
-      toast.success(`${itemName} added to bill`);
+      toast.success(`Successfully added ${validRows.length} item(s) to bill!`);
       setItemModalOpen(false);
-      setItemName("");
-      setItemQuantity(1);
-      setItemNotes("");
+      setItemsList([createDefaultRow()]);
       fetchStay();
     } catch (err: any) {
       toast.error(err.message);
@@ -228,10 +299,6 @@ export default function StayBillPage({
     isFullyPaid: false,
   };
 
-  const filteredCatalog = catalogItems.filter(
-    (ci) => ci.category === itemCategory
-  );
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Top Action Bar (hidden on print) */}
@@ -263,14 +330,21 @@ export default function StayBillPage({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setPaymentAmount(String(calc.outstandingBalance > 0 ? calc.outstandingBalance : ""));
-                  setPaymentModalOpen(true);
-                }}
+                onClick={() => setPaymentModalOpen(true)}
                 className="h-8 gap-1.5"
               >
                 <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Add Payment</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQrModalOpen(true)}
+                className="h-8 gap-1.5 border-emerald-600/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-semibold"
+              >
+                <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Payment QR</span>
               </Button>
 
               <Button
@@ -279,7 +353,7 @@ export default function StayBillPage({
                 className="h-8 gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
-                <span>Add F&B / Service</span>
+                <span>Add Items to Bill</span>
               </Button>
 
               <Link href={`/stays/${stay.id}/checkout`}>
@@ -548,6 +622,19 @@ export default function StayBillPage({
                     : "PAID (NPR 0)"}
                 </span>
               </div>
+
+              {calc.outstandingBalance > 0 && (
+                <div className="pt-2 no-print">
+                  <Button
+                    type="button"
+                    onClick={() => setQrModalOpen(true)}
+                    className="w-full h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs shadow-sm"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    <span>Scan QR to Settle ({formatCurrency(calc.outstandingBalance)})</span>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -568,137 +655,202 @@ export default function StayBillPage({
         </CardContent>
       </Card>
 
-      {/* Add Item Modal */}
+      {/* Multi-Item Batch Add Modal */}
       <Dialog open={itemModalOpen} onOpenChange={setItemModalOpen}>
-        <DialogContent className="max-w-md">
-          <form onSubmit={handleAddItem}>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-6">
+          <form onSubmit={handleAddBatchItems} className="flex flex-col flex-1 overflow-hidden space-y-4">
             <DialogHeader>
-              <DialogTitle>Add Item to Customer Bill</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Utensils className="w-5 h-5 text-primary" />
+                <span>Add Items to Customer Bill</span>
+              </DialogTitle>
               <DialogDescription>
-                Add food, beverages, or additional services to Room {stay.room.roomNumber}
+                Add one or multiple food, drink, or service items at once to Room {stay.room.roomNumber}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-3">
-              {/* Category Picker */}
-              <div className="space-y-1.5">
-                <Label>Category</Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {(["FOOD", "DRINK", "SERVICE", "OTHER"] as BillItemCategory[]).map((cat) => (
+            {/* Quick Catalog Bar */}
+            {catalogItems.length > 0 && (
+              <div className="space-y-1.5 p-3 rounded-lg bg-muted/30 border">
+                <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Quick Add from Menu & Services Catalog
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                  {catalogItems.map((ci) => (
                     <Button
-                      key={cat}
+                      key={ci.id}
                       type="button"
-                      variant={itemCategory === cat ? "default" : "outline"}
+                      variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setItemCategory(cat);
-                        setSelectedCatalogItem("");
-                      }}
-                      className="text-xs"
+                      onClick={() => handleAddCatalogItemToBatch(ci)}
+                      className="h-7 text-xs px-2.5 py-0.5 gap-1 hover:border-primary hover:text-primary"
                     >
-                      {cat}
+                      <Plus className="w-3 h-3" />
+                      <span>{ci.name}</span>
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        (NPR {ci.defaultPrice})
+                      </span>
                     </Button>
                   ))}
                 </div>
               </div>
+            )}
 
-              {/* Catalog Quick Pick */}
-              {filteredCatalog.length > 0 && (
-                <div className="space-y-1.5">
-                  <Label>Quick Catalog Pick</Label>
-                  <Select
-                    value={selectedCatalogItem}
-                    onValueChange={handleSelectCatalogItem}
-                  >
-                    <SelectTrigger className="text-xs h-8">
-                      <SelectValue placeholder="Choose from catalog..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredCatalog.map((ci) => (
-                        <SelectItem key={ci.id} value={ci.id} className="text-xs">
-                          {ci.name} — NPR {ci.defaultPrice}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            {/* Dynamic Items List */}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {itemsList.map((item, index) => (
+                <div
+                  key={item.id}
+                  className="p-3 bg-card border rounded-xl space-y-2 relative shadow-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-muted-foreground">
+                      Item #{index + 1}
+                    </span>
+                    {itemsList.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveRow(item.id)}
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        title="Remove Item"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                    {/* Category */}
+                    <div className="sm:col-span-3">
+                      <Label className="text-[10px] text-muted-foreground">Category</Label>
+                      <Select
+                        value={item.category}
+                        onValueChange={(val: any) => handleUpdateItemRow(item.id, "category", val)}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FOOD">Food</SelectItem>
+                          <SelectItem value="DRINK">Drink</SelectItem>
+                          <SelectItem value="SERVICE">Service</SelectItem>
+                          <SelectItem value="OTHER">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Name */}
+                    <div className="sm:col-span-4">
+                      <Label className="text-[10px] text-muted-foreground">Item Name *</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        placeholder="e.g. Steamed Momo"
+                        value={item.name}
+                        onChange={(e) => handleUpdateItemRow(item.id, "name", e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    {/* Qty */}
+                    <div className="sm:col-span-2">
+                      <Label className="text-[10px] text-muted-foreground">Qty *</Label>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        className="h-8 text-xs font-mono"
+                        value={item.quantity}
+                        onChange={(e) => handleUpdateItemRow(item.id, "quantity", e.target.value)}
+                        onBlur={() => {
+                          if (!item.quantity || parseInt(item.quantity) < 1) {
+                            handleUpdateItemRow(item.id, "quantity", "1");
+                          }
+                        }}
+                        required
+                      />
+                    </div>
+
+                    {/* Unit Price */}
+                    <div className="sm:col-span-3">
+                      <Label className="text-[10px] text-muted-foreground">Price (NPR) *</Label>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        placeholder="0"
+                        className="h-8 text-xs font-mono font-bold"
+                        value={item.unitPrice}
+                        onChange={(e) => handleUpdateItemRow(item.id, "unitPrice", e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <Input
+                      className="h-7 text-[11px] max-w-sm"
+                      placeholder="Notes (optional, e.g. Less spicy, Room delivery)"
+                      value={item.notes || ""}
+                      onChange={(e) => handleUpdateItemRow(item.id, "notes", e.target.value)}
+                    />
+                    <div className="text-right font-mono font-semibold text-muted-foreground">
+                      Subtotal:{" "}
+                      <span className="text-foreground">
+                        {formatCurrency(
+                          (Math.max(1, parseInt(item.quantity) || 1)) *
+                            (Math.max(0, Number(item.unitPrice) || 0))
+                        )}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              )}
-
-              {/* Item Name */}
-              <div className="space-y-1.5">
-                <Label htmlFor="itemName">Item Name *</Label>
-                <Input
-                  id="itemName"
-                  value={itemName}
-                  onChange={(e) => setItemName(e.target.value)}
-                  placeholder="e.g. Steamed Chicken Momo"
-                  required
-                />
-              </div>
-
-              {/* Quantity & Unit Price */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="qty">Quantity</Label>
-                  <Input
-                    id="qty"
-                    type="number"
-                    inputMode="numeric"
-                    min="1"
-                    value={itemQuantity}
-                    onChange={(e) => setItemQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="unitPrice">Unit Price (NPR) *</Label>
-                  <Input
-                    id="unitPrice"
-                    type="number"
-                    inputMode="numeric"
-                    step="10"
-                    min="0"
-                    value={itemUnitPrice}
-                    onChange={(e) => setItemUnitPrice(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Computed Subtotal */}
-              <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between text-xs font-semibold">
-                <span>Subtotal:</span>
-                <span className="font-mono text-sm text-foreground">
-                  {formatCurrency((itemQuantity || 1) * (Number(itemUnitPrice) || 0))}
-                </span>
-              </div>
-
-              {/* Notes */}
-              <div className="space-y-1.5">
-                <Label htmlFor="itemNotes">Notes (Optional)</Label>
-                <Input
-                  id="itemNotes"
-                  value={itemNotes}
-                  onChange={(e) => setItemNotes(e.target.value)}
-                  placeholder="e.g. Less spicy, delivered to room"
-                />
-              </div>
+              ))}
             </div>
 
-            <DialogFooter>
+            {/* Bottom Controls */}
+            <div className="pt-2 border-t flex flex-col sm:flex-row items-center justify-between gap-3">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setItemModalOpen(false)}
-                disabled={addingItem}
+                size="sm"
+                onClick={handleAddEmptyRow}
+                className="h-8 gap-1 text-xs w-full sm:w-auto"
               >
-                Cancel
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Another Item</span>
               </Button>
-              <Button type="submit" disabled={addingItem}>
-                {addingItem ? "Adding..." : "Add to Bill"}
-              </Button>
-            </DialogFooter>
+
+              <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                <div className="text-xs">
+                  Batch Total:{" "}
+                  <span className="font-mono text-base font-bold text-foreground">
+                    {formatCurrency(batchTotal)}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setItemModalOpen(false)}
+                    className="h-8 text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={addingItem}
+                    className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                  >
+                    {addingItem ? "Saving Items..." : `Add ${itemsList.filter(r => r.name.trim()).length || itemsList.length} Item(s)`}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
@@ -753,13 +905,31 @@ export default function StayBillPage({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="CASH">Cash</SelectItem>
-                    <SelectItem value="QR_PAYMENT">Fonepay / QR Payment</SelectItem>
+                    <SelectItem value="QR_PAYMENT">Fonepay / QR Payment (Nabil Bank)</SelectItem>
                     <SelectItem value="BANK_TRANSFER">Bank Transfer / ConnectIPS</SelectItem>
                     <SelectItem value="CARD">Debit / Credit Card</SelectItem>
                     <SelectItem value="OTHER">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Show QR banner inside payment modal when QR_PAYMENT selected */}
+              {paymentMethod === "QR_PAYMENT" && (
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-500/30 rounded-xl space-y-2 text-center">
+                  <div className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center justify-center gap-1.5">
+                    <QrCode className="w-4 h-4 text-emerald-600" />
+                    <span>Nabil Bank Official QR (SUJAN G.C.)</span>
+                  </div>
+                  <img
+                    src="/images/nabil-qr.jpg"
+                    alt="Nabil Bank QR"
+                    className="max-w-[170px] h-auto mx-auto rounded-lg border shadow-sm"
+                  />
+                  <div className="text-[11px] text-muted-foreground">
+                    Account: <span className="font-mono font-bold text-foreground">27710017501941</span>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <Label htmlFor="payNotes">Transaction Note / Reference (Optional)</Label>
@@ -792,6 +962,15 @@ export default function StayBillPage({
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Standalone Payment QR Modal */}
+      <PaymentQrModal
+        open={qrModalOpen}
+        onOpenChange={setQrModalOpen}
+        dueAmount={calc.outstandingBalance}
+        roomNumber={stay.room.roomNumber}
+        guestName={stay.customer.fullName}
+      />
     </div>
   );
 }

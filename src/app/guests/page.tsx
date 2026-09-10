@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Utensils,
   UserPlus,
+  QrCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -24,11 +25,13 @@ import { Input } from "@/components/ui/input";
 import { formatCurrency, formatNepalDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { StayDTO } from "@/types";
+import { PaymentQrModal } from "@/components/billing/payment-qr-modal";
 
 export default function CurrentGuestsPage() {
   const [stays, setStays] = useState<StayDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [qrModalStay, setQrModalStay] = useState<StayDTO | null>(null);
 
   const fetchCurrentGuests = async () => {
     try {
@@ -215,13 +218,28 @@ export default function CurrentGuestsPage() {
 
                     <div className="pt-2 border-t flex items-center justify-between font-bold text-sm">
                       <span>Balance Due:</span>
-                      {calc.outstandingBalance > 0 ? (
-                        <span className="text-amber-600 dark:text-amber-400 font-mono">
-                          {formatCurrency(calc.outstandingBalance)}
-                        </span>
-                      ) : (
-                        <span className="text-emerald-600 font-mono">PAID IN FULL</span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {calc.outstandingBalance > 0 ? (
+                          <>
+                            <span className="text-amber-600 dark:text-amber-400 font-mono">
+                              {formatCurrency(calc.outstandingBalance)}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setQrModalStay(stay)}
+                              className="h-6 px-1.5 text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 gap-1"
+                              title="Scan QR to pay"
+                            >
+                              <QrCode className="w-3.5 h-3.5" />
+                              <span className="text-[11px] font-semibold">QR</span>
+                            </Button>
+                          </>
+                        ) : (
+                          <span className="text-emerald-600 font-mono">PAID IN FULL</span>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
 
@@ -243,6 +261,14 @@ export default function CurrentGuestsPage() {
           </div>
         </div>
       )}
+
+      <PaymentQrModal
+        open={!!qrModalStay}
+        onOpenChange={(open) => !open && setQrModalStay(null)}
+        dueAmount={qrModalStay?.billCalculation?.outstandingBalance}
+        roomNumber={qrModalStay?.room?.roomNumber}
+        guestName={qrModalStay?.customer?.fullName}
+      />
     </div>
   );
 }
