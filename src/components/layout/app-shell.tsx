@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { usePathname } from "next/navigation";
+import React, { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
 import { SessionUser } from "@/types";
@@ -14,9 +14,16 @@ interface AppShellProps {
 
 export function AppShell({ user, children }: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // If on /login page, don't show sidebar or top header
+  useEffect(() => {
+    if (!user && pathname !== "/login") {
+      router.replace("/login");
+    }
+  }, [user, pathname, router]);
+
+  // If on /login page, render clean login view without sidebar
   if (pathname === "/login") {
     return (
       <div className="min-h-screen bg-background flex flex-col justify-center">
@@ -24,6 +31,11 @@ export function AppShell({ user, children }: AppShellProps) {
         <Toaster position="top-right" richColors />
       </div>
     );
+  }
+
+  // If unauthenticated on any other page, block UI completely
+  if (!user) {
+    return null;
   }
 
   return (
