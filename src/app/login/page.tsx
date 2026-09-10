@@ -39,7 +39,7 @@ export default function LoginPage() {
         throw new Error(data.error || "Login failed");
       }
 
-      toast.success(`Welcome back, ${data.user.name}!`);
+      toast.success("Welcome Krishna Gc!");
       router.push("/");
       router.refresh();
     } catch (err: any) {
@@ -126,10 +126,15 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        {/* Security Notice */}
-        <div className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span>Internal authorized access only • IP logged & rate-limited</span>
+        {/* Security Notice & Footer */}
+        <div className="text-center space-y-2 text-xs text-muted-foreground">
+          <div className="flex items-center justify-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>Internal authorized access only • IP logged & rate-limited</span>
+          </div>
+          <p className="text-[11px]">
+            © {new Date().getFullYear()} Hotel Surya. All Rights Reserved. • Developed by <span className="font-semibold text-foreground">SujanGC</span>
+          </p>
         </div>
       </div>
     </div>

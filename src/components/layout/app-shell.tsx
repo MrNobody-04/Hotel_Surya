@@ -52,8 +52,11 @@ export function AppShell({ user, children }: AppShellProps) {
           user={user}
           onMobileMenuToggle={() => setMobileMenuOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          <div className="mx-auto max-w-7xl">{children}</div>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 flex flex-col justify-between">
+          <div className="mx-auto max-w-7xl w-full">{children}</div>
+          <footer className="mt-12 pt-6 pb-2 border-t text-center text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Hotel Surya. All Rights Reserved. • Developed by <span className="font-semibold text-foreground">SujanGC</span>
+          </footer>
         </main>
       </div>
 

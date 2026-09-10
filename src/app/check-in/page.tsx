@@ -64,7 +64,7 @@ export default function CheckInPage() {
 
   // Stay Details Fields
   const [selectedRoomId, setSelectedRoomId] = useState<string>(preselectedRoomId || "");
-  const [numberOfPeople, setNumberOfPeople] = useState<number>(1);
+  const [numberOfPeople, setNumberOfPeople] = useState<string>("1");
   const [roomPrice, setRoomPrice] = useState<string>("3500");
   const [expectedCheckoutDate, setExpectedCheckoutDate] = useState<string>(() => {
     const tomorrow = new Date();
@@ -235,7 +235,7 @@ export default function CheckInPage() {
       // Payload
       const payload: any = {
         roomId: selectedRoomId,
-        numberOfPeople: Math.max(1, numberOfPeople),
+        numberOfPeople: Math.max(1, parseInt(numberOfPeople) || 1),
         expectedCheckoutDate: new Date(expectedCheckoutDate).toISOString(),
         roomPrice: priceNum,
         notes: stayNotes || null,
@@ -620,7 +620,13 @@ export default function CheckInPage() {
                   min="1"
                   max="10"
                   value={numberOfPeople}
-                  onChange={(e) => setNumberOfPeople(Math.max(1, parseInt(e.target.value) || 1))}
+                  onChange={(e) => setNumberOfPeople(e.target.value)}
+                  onBlur={() => {
+                    if (!numberOfPeople || parseInt(numberOfPeople) < 1) {
+                      setNumberOfPeople("1");
+                    }
+                  }}
+                  placeholder="1"
                   required
                 />
               </div>

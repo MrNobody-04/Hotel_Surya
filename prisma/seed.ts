@@ -15,10 +15,10 @@ async function main() {
       passwordHash,
       role: "OWNER" as any,
       isActive: true,
-      name: "Sujan GC",
+      name: "Krishna Gc",
     },
     create: {
-      name: "Sujan GC",
+      name: "Krishna Gc",
       email: "gcsujan321@gmail.com",
       passwordHash,
       role: "OWNER" as any,
@@ -26,7 +26,7 @@ async function main() {
     },
   });
 
-  console.log("✅ Seeded Owner User (Sujan GC)");
+  console.log("✅ Seeded Owner User (Krishna Gc)");
 
   // 2. Seed Initial 7 Rooms (2 AC, 5 Non-AC)
   const initialRooms = [

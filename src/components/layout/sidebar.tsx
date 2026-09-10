@@ -168,13 +168,17 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
       </div>
 
       {/* Hotel Surya Status Footer */}
-      <div className="p-4 border-t bg-muted/20">
+      <div className="p-4 border-t bg-muted/20 space-y-2">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>Operational</span>
           </span>
           <span className="font-mono text-[11px]">v1.0.0</span>
+        </div>
+        <div className="pt-2 border-t border-border/50 text-[10px] text-muted-foreground text-center">
+          © {new Date().getFullYear()} Hotel Surya<br />
+          Developed by <span className="font-semibold text-foreground">SujanGC</span>
         </div>
       </div>
     </aside>
