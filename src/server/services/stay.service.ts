@@ -35,7 +35,8 @@ export interface CheckInInput {
 }
 
 export async function checkIn(input: CheckInInput) {
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(
+    async (tx) => {
     // 1. Verify room exists and is AVAILABLE (Double-booking protection)
     const room = await tx.room.findUnique({
       where: { id: input.roomId },
@@ -131,6 +132,9 @@ export async function checkIn(input: CheckInInput) {
     }
 
     return { stay, room, customerId };
+  }, {
+    maxWait: 15000,
+    timeout: 30000,
   });
 
   // 7. Write Audit Log after transaction commits
@@ -349,6 +353,9 @@ export async function checkOut(input: {
       roomNumber: stay.room.roomNumber,
       customerName: stay.customer.fullName,
     };
+  }, {
+    maxWait: 15000,
+    timeout: 30000,
   });
 
   // 7. Write immutable audit log after transaction commits

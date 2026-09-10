@@ -14,16 +14,19 @@ export async function getDashboardMetrics() {
   // Start of current month
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
 
-  // 1. Room Overview
-  const rooms = await prisma.room.findMany();
-  const totalRooms = rooms.length;
-  const availableRooms = rooms.filter((r) => r.status === "AVAILABLE").length;
-  const occupiedRooms = rooms.filter((r) => r.status === "OCCUPIED").length;
-  const reservedRooms = rooms.filter((r) => r.status === "RESERVED").length;
-  const maintenanceRooms = rooms.filter((r) => r.status === "MAINTENANCE").length;
-
-  // 2. Today's Operations
-  const [todayCheckIns, todayCheckOuts, activeStays] = await Promise.all([
+  // Run all independent queries in parallel for high speed
+  const [
+    rooms,
+    todayCheckIns,
+    todayCheckOuts,
+    activeStays,
+    todayPayments,
+    weekPayments,
+    monthPayments,
+    todayExp,
+    monthExp,
+  ] = await Promise.all([
+    prisma.room.findMany(),
     prisma.stay.count({
       where: {
         checkInAt: { gte: startOfToday, lte: endOfToday },
@@ -44,8 +47,36 @@ export async function getDashboardMetrics() {
       },
       orderBy: { checkInAt: "desc" },
     }),
+    prisma.payment.aggregate({
+      where: { timestamp: { gte: startOfToday, lte: endOfToday } },
+      _sum: { amount: true },
+    }),
+    prisma.payment.aggregate({
+      where: { timestamp: { gte: startOfWeek } },
+      _sum: { amount: true },
+    }),
+    prisma.payment.aggregate({
+      where: { timestamp: { gte: startOfMonth } },
+      _sum: { amount: true },
+    }),
+    prisma.expense.aggregate({
+      where: { date: { gte: startOfToday, lte: endOfToday } },
+      _sum: { amount: true },
+    }),
+    prisma.expense.aggregate({
+      where: { date: { gte: startOfMonth } },
+      _sum: { amount: true },
+    }),
   ]);
 
+  // 1. Room Overview
+  const totalRooms = rooms.length;
+  const availableRooms = rooms.filter((r) => r.status === "AVAILABLE").length;
+  const occupiedRooms = rooms.filter((r) => r.status === "OCCUPIED").length;
+  const reservedRooms = rooms.filter((r) => r.status === "RESERVED").length;
+  const maintenanceRooms = rooms.filter((r) => r.status === "MAINTENANCE").length;
+
+  // 2. Today's Operations
   const currentGuestsHeadcount = activeStays.reduce(
     (sum, stay) => sum + (stay.numberOfPeople || 1),
     0
@@ -77,37 +108,11 @@ export async function getDashboardMetrics() {
   });
 
   // 4. Financial: Revenue (from actual recorded payments)
-  const [todayPayments, weekPayments, monthPayments] = await Promise.all([
-    prisma.payment.aggregate({
-      where: { timestamp: { gte: startOfToday, lte: endOfToday } },
-      _sum: { amount: true },
-    }),
-    prisma.payment.aggregate({
-      where: { timestamp: { gte: startOfWeek } },
-      _sum: { amount: true },
-    }),
-    prisma.payment.aggregate({
-      where: { timestamp: { gte: startOfMonth } },
-      _sum: { amount: true },
-    }),
-  ]);
-
   const todayRevenue = todayPayments._sum.amount || 0;
   const weeklyRevenue = weekPayments._sum.amount || 0;
   const monthlyRevenue = monthPayments._sum.amount || 0;
 
   // 5. Financial: Expenses
-  const [todayExp, monthExp] = await Promise.all([
-    prisma.expense.aggregate({
-      where: { date: { gte: startOfToday, lte: endOfToday } },
-      _sum: { amount: true },
-    }),
-    prisma.expense.aggregate({
-      where: { date: { gte: startOfMonth } },
-      _sum: { amount: true },
-    }),
-  ]);
-
   const todayExpenses = todayExp._sum.amount || 0;
   const monthlyExpenses = monthExp._sum.amount || 0;
 

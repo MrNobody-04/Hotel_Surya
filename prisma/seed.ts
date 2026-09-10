@@ -6,48 +6,27 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Starting Hotel Surya database seed...");
 
-  // 1. Seed Users (Demo accounts)
-  const passwordHash = await bcrypt.hash("SuryaOwner@2026", 10);
-  const managerPasswordHash = await bcrypt.hash("SuryaManager@2026", 10);
-  const receptionPasswordHash = await bcrypt.hash("SuryaReception@2026", 10);
+  // 1. Seed Owner User
+  const passwordHash = await bcrypt.hash("Suj@ngc123", 10);
 
   const owner = await prisma.user.upsert({
-    where: { email: "owner@hotelsurya.com" },
-    update: {},
+    where: { email: "gcsujan321@gmail.com" },
+    update: {
+      passwordHash,
+      role: "OWNER" as any,
+      isActive: true,
+      name: "Sujan GC",
+    },
     create: {
-      name: "Surya Prakash (Owner)",
-      email: "owner@hotelsurya.com",
+      name: "Sujan GC",
+      email: "gcsujan321@gmail.com",
       passwordHash,
       role: "OWNER" as any,
       isActive: true,
     },
   });
 
-  const manager = await prisma.user.upsert({
-    where: { email: "manager@hotelsurya.com" },
-    update: {},
-    create: {
-      name: "Ramesh Shrestha (Manager)",
-      email: "manager@hotelsurya.com",
-      passwordHash: managerPasswordHash,
-      role: "MANAGER" as any,
-      isActive: true,
-    },
-  });
-
-  const receptionist = await prisma.user.upsert({
-    where: { email: "reception@hotelsurya.com" },
-    update: {},
-    create: {
-      name: "Pooja Gurung (Receptionist)",
-      email: "reception@hotelsurya.com",
-      passwordHash: receptionPasswordHash,
-      role: "RECEPTIONIST" as any,
-      isActive: true,
-    },
-  });
-
-  console.log("✅ Seeded Users (Owner, Manager, Receptionist)");
+  console.log("✅ Seeded Owner User (Sujan GC)");
 
   // 2. Seed Initial 7 Rooms (2 AC, 5 Non-AC)
   const initialRooms = [
@@ -164,7 +143,7 @@ async function main() {
       roomPrice: 4500, // Negotiated AC rate
       status: "ACTIVE" as any,
       notes: "Checked in around lunch time. Requested early morning tea.",
-      createdById: receptionist.id,
+      createdById: owner.id,
     },
   });
 
@@ -193,7 +172,7 @@ async function main() {
         quantity: 2,
         unitPrice: 240,
         total: 480,
-        createdById: receptionist.id,
+        createdById: owner.id,
       },
       {
         stayId: stay1.id,
@@ -202,7 +181,7 @@ async function main() {
         quantity: 2,
         unitPrice: 100,
         total: 200,
-        createdById: receptionist.id,
+        createdById: owner.id,
       },
     ],
   });
@@ -215,7 +194,7 @@ async function main() {
       method: "CASH" as any,
       timestamp: new Date(now.getTime() - 4 * 60 * 60 * 1000),
       notes: "Advance room prepayment in Cash",
-      recordedById: receptionist.id,
+      recordedById: owner.id,
     },
   });
 
@@ -236,7 +215,7 @@ async function main() {
       roomPrice: 2200,
       status: "CHECKED_OUT" as any,
       notes: "Stay completed smoothly",
-      createdById: receptionist.id,
+      createdById: owner.id,
     },
   });
 
@@ -249,7 +228,7 @@ async function main() {
         quantity: 1,
         unitPrice: 350,
         total: 350,
-        createdById: receptionist.id,
+        createdById: owner.id,
       },
       {
         stayId: stay2.id,
@@ -258,7 +237,7 @@ async function main() {
         quantity: 2,
         unitPrice: 50,
         total: 100,
-        createdById: receptionist.id,
+        createdById: owner.id,
       },
     ],
   });
@@ -272,7 +251,7 @@ async function main() {
         method: "QR_PAYMENT" as any,
         timestamp: pastCheckIn,
         notes: "Fonepay QR Room Payment",
-        recordedById: receptionist.id,
+        recordedById: owner.id,
       },
       {
         stayId: stay2.id,
@@ -280,7 +259,7 @@ async function main() {
         method: "CASH" as any,
         timestamp: pastCheckOut,
         notes: "Cash payment at checkout for F&B",
-        recordedById: receptionist.id,
+        recordedById: owner.id,
       },
     ],
   });
@@ -304,7 +283,7 @@ async function main() {
         date: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
         paymentMethod: "CASH" as any,
         notes: "Weekly kitchen vegetables and groceries",
-        createdById: manager.id,
+        createdById: owner.id,
       },
       {
         title: "Nepal Electricity Authority (NEA) Bill",
@@ -313,7 +292,7 @@ async function main() {
         date: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
         paymentMethod: "QR_PAYMENT" as any,
         notes: "Monthly hotel electricity bill",
-        createdById: manager.id,
+        createdById: owner.id,
       },
       {
         title: "Subisu High-Speed Optical Fiber Internet",
@@ -339,8 +318,8 @@ async function main() {
         timestamp: new Date(now.getTime() - 24 * 60 * 60 * 1000),
       },
       {
-        userId: receptionist.id,
-        userName: receptionist.name,
+        userId: owner.id,
+        userName: owner.name,
         action: "CHECKIN_CREATED",
         entity: "Stay",
         entityId: stay1.id,
@@ -348,8 +327,8 @@ async function main() {
         timestamp: stay1.checkInAt,
       },
       {
-        userId: receptionist.id,
-        userName: receptionist.name,
+        userId: owner.id,
+        userName: owner.name,
         action: "CHECKOUT_COMPLETED",
         entity: "Stay",
         entityId: stay2.id,

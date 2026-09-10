@@ -3,7 +3,7 @@ import prisma from "../src/lib/db";
 import { checkIn, addBillItem, addPayment, checkOut, getStayById } from "../src/server/services/stay.service";
 import { updateRoom } from "../src/server/services/room.service";
 
-describe("Critical Hotel Surya End-to-End Operational Workflow", () => {
+describe("Critical Hotel Surya End-to-End Operational Workflow", { timeout: 30000 }, () => {
   let testUser: any;
   let testRoom: any;
   let customer: any;

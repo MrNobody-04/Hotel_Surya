@@ -50,12 +50,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickLogin = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setError(null);
-  };
-
   return (
     <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 bg-gradient-to-br from-slate-50 via-slate-100 to-blue-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <div className="w-full max-w-md space-y-6">
@@ -97,7 +91,7 @@ export default function LoginPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="e.g. owner@hotelsurya.com"
+                    placeholder="gcsujan321@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-9"
@@ -130,61 +124,6 @@ export default function LoginPage() {
               </Button>
             </form>
           </CardContent>
-
-          <CardFooter className="flex flex-col space-y-3 pt-2 border-t bg-muted/20 rounded-b-xl">
-            <div className="w-full flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Demo Accounts Quick-Fill
-              </span>
-              <Badge variant="outline" className="text-[10px]">
-                Portfolio Testing
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 w-full">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="text-xs flex flex-col h-auto py-2 hover:border-purple-500"
-                onClick={() =>
-                  handleQuickLogin("owner@hotelsurya.com", "SuryaOwner@2026")
-                }
-              >
-                <span className="font-semibold text-purple-600 dark:text-purple-400">Owner</span>
-                <span className="text-[10px] text-muted-foreground">Full Control</span>
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="text-xs flex flex-col h-auto py-2 hover:border-blue-500"
-                onClick={() =>
-                  handleQuickLogin("manager@hotelsurya.com", "SuryaManager@2026")
-                }
-              >
-                <span className="font-semibold text-blue-600 dark:text-blue-400">Manager</span>
-                <span className="text-[10px] text-muted-foreground">Operations</span>
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="text-xs flex flex-col h-auto py-2 hover:border-emerald-500"
-                onClick={() =>
-                  handleQuickLogin(
-                    "reception@hotelsurya.com",
-                    "SuryaReception@2026"
-                  )
-                }
-              >
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">Reception</span>
-                <span className="text-[10px] text-muted-foreground">Desk Desk</span>
-              </Button>
-            </div>
-          </CardFooter>
         </Card>
 
         {/* Security Notice */}
