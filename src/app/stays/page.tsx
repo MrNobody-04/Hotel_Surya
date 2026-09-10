@@ -13,6 +13,7 @@ import {
   Search,
   Receipt,
   CheckCircle2,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,12 +22,14 @@ import { Input } from "@/components/ui/input";
 import { formatCurrency, formatNepalDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { StayDTO } from "@/types";
+import { DeleteStayModal, DeleteStayTarget } from "@/components/stays/delete-stay-modal";
 
 export default function StaysHistoryPage() {
   const [stays, setStays] = useState<StayDTO[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<DeleteStayTarget | null>(null);
 
   const fetchHistory = async () => {
     try {
@@ -176,7 +179,7 @@ export default function StaysHistoryPage() {
                     <th className="px-4 py-3">Charges Breakdown</th>
                     <th className="px-4 py-3">Total Billed</th>
                     <th className="px-4 py-3">Paid</th>
-                    <th className="px-4 py-3 text-right">Invoice</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -224,12 +227,32 @@ export default function StaysHistoryPage() {
                           {formatCurrency(calc?.paidAmount || stay.roomPrice)}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <Link href={`/stays/${stay.id}/bill`}>
-                            <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                              <Receipt className="w-3 h-3" />
-                              <span>View Receipt</span>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Link href={`/stays/${stay.id}/bill`}>
+                              <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                                <Receipt className="w-3 h-3" />
+                                <span>View Receipt</span>
+                              </Button>
+                            </Link>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setDeleteTarget({
+                                  id: stay.id,
+                                  roomNumber: stay.room.roomNumber,
+                                  guestName: stay.customer.fullName,
+                                  status: stay.status,
+                                })
+                              }
+                              className="h-7 px-2 text-xs gap-1 border-rose-200 dark:border-rose-900/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-700"
+                              title="Delete Stay Record"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span className="hidden sm:inline">Delete</span>
                             </Button>
-                          </Link>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -240,6 +263,13 @@ export default function StaysHistoryPage() {
           )}
         </CardContent>
       </Card>
+
+      <DeleteStayModal
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        stay={deleteTarget}
+        onSuccess={fetchHistory}
+      />
     </div>
   );
 }

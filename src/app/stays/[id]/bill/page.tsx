@@ -35,6 +35,7 @@ import { formatCurrency, formatNepalDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { BillItemCategory, PaymentMethod, StayDTO } from "@/types";
 import { PaymentQrModal } from "@/components/billing/payment-qr-modal";
+import { DeleteStayModal } from "@/components/stays/delete-stay-modal";
 
 export default function StayBillPage({
   params,
@@ -46,6 +47,7 @@ export default function StayBillPage({
 
   const [stay, setStay] = useState<StayDTO | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   // Catalog items for quick selection
   const [catalogItems, setCatalogItems] = useState<any[]>([]);
@@ -323,6 +325,18 @@ export default function StayBillPage({
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Print Invoice</span>
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setDeleteModalOpen(true)}
+            className="h-8 gap-1.5 border-rose-200 dark:border-rose-900/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-700"
+            title="Delete this stay record"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Delete Stay</span>
           </Button>
 
           {stay.status === "ACTIVE" && (
@@ -970,6 +984,25 @@ export default function StayBillPage({
         dueAmount={calc.outstandingBalance}
         roomNumber={stay.room.roomNumber}
         guestName={stay.customer.fullName}
+      />
+
+      {/* Delete Stay Modal */}
+      <DeleteStayModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        stay={
+          stay
+            ? {
+                id: stay.id,
+                roomNumber: stay.room.roomNumber,
+                guestName: stay.customer.fullName,
+                status: stay.status,
+              }
+            : null
+        }
+        onSuccess={() => {
+          router.push(stay?.status === "ACTIVE" ? "/guests" : "/stays");
+        }}
       />
     </div>
   );

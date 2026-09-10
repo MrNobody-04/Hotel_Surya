@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/server/auth/rbac";
-import { getCustomerById, updateCustomer } from "@/server/services/customer.service";
+import {
+  getCustomerById,
+  updateCustomer,
+  deleteCustomer,
+} from "@/server/services/customer.service";
 import { logAuditEvent } from "@/server/services/audit.service";
 
 export async function GET(
@@ -47,6 +51,34 @@ export async function PATCH(
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Failed to update customer" },
+      { status: error.statusCode || 400 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireAuth();
+    const { id } = await params;
+
+    const result = await deleteCustomer(id, user.id, user.name);
+
+    await logAuditEvent({
+      userId: user.id,
+      userName: user.name,
+      action: "CUSTOMER_DELETED",
+      entity: "Customer",
+      entityId: id,
+      metadata: { fullName: result.fullName },
+    });
+
+    return NextResponse.json({ ...result });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Failed to delete customer" },
       { status: error.statusCode || 400 }
     );
   }

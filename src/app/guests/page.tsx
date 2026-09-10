@@ -17,6 +17,7 @@ import {
   Utensils,
   UserPlus,
   QrCode,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -26,12 +27,14 @@ import { formatCurrency, formatNepalDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { StayDTO } from "@/types";
 import { PaymentQrModal } from "@/components/billing/payment-qr-modal";
+import { DeleteStayModal, DeleteStayTarget } from "@/components/stays/delete-stay-modal";
 
 export default function CurrentGuestsPage() {
   const [stays, setStays] = useState<StayDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [qrModalStay, setQrModalStay] = useState<StayDTO | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteStayTarget | null>(null);
 
   const fetchCurrentGuests = async () => {
     try {
@@ -164,7 +167,26 @@ export default function CurrentGuestsPage() {
                           {stay.room.type}
                         </Badge>
                       </div>
-                      <Badge variant="info">IN-HOUSE</Badge>
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="info">IN-HOUSE</Badge>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            setDeleteTarget({
+                              id: stay.id,
+                              roomNumber: stay.room.roomNumber,
+                              guestName: stay.customer.fullName,
+                              status: stay.status,
+                            })
+                          }
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          title="Delete / Cancel Check-in"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="mt-2">
@@ -268,6 +290,13 @@ export default function CurrentGuestsPage() {
         dueAmount={qrModalStay?.billCalculation?.outstandingBalance}
         roomNumber={qrModalStay?.room?.roomNumber}
         guestName={qrModalStay?.customer?.fullName}
+      />
+
+      <DeleteStayModal
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        stay={deleteTarget}
+        onSuccess={fetchCurrentGuests}
       />
     </div>
   );

@@ -15,6 +15,8 @@ import {
   Upload,
   X,
   History,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -31,6 +33,10 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<CustomerDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+
+  // Delete Customer State
+  const [deleteCustomerTarget, setDeleteCustomerTarget] = useState<CustomerDTO | null>(null);
+  const [deletingCustomer, setDeletingCustomer] = useState(false);
 
   // Create Modal
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -69,6 +75,27 @@ export default function CustomersPage() {
   useEffect(() => {
     fetchCustomers(query);
   }, [query]);
+
+  const handleDeleteCustomer = async () => {
+    if (!deleteCustomerTarget) return;
+    setDeletingCustomer(true);
+    try {
+      const res = await fetch(`/api/customers/${deleteCustomerTarget.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete customer");
+      }
+      toast.success(`Customer profile for ${deleteCustomerTarget.fullName} deleted successfully`);
+      setDeleteCustomerTarget(null);
+      fetchCustomers(query);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete customer");
+    } finally {
+      setDeletingCustomer(false);
+    }
+  };
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -279,15 +306,25 @@ export default function CustomersPage() {
                 </div>
               </CardContent>
 
-              <CardFooter className="pt-2 pb-3 px-4 border-t bg-muted/10">
+              <CardFooter className="pt-2 pb-3 px-4 border-t bg-muted/10 flex items-center gap-2">
                 <Link
                   href={`/check-in`}
-                  className="w-full"
+                  className="flex-1"
                 >
                   <Button variant="outline" size="sm" className="w-full text-xs h-8">
                     Check In Guest
                   </Button>
                 </Link>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteCustomerTarget(cust)}
+                  className="h-8 px-2.5 text-xs text-rose-600 border-rose-200 dark:border-rose-900/40 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-700"
+                  title="Delete Customer Profile"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
               </CardFooter>
             </Card>
           ))}
@@ -471,6 +508,57 @@ export default function CustomersPage() {
               />
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Customer Confirmation Dialog */}
+      <Dialog
+        open={!!deleteCustomerTarget}
+        onOpenChange={(open) => !deletingCustomer && !open && setDeleteCustomerTarget(null)}
+      >
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader className="space-y-2 text-left">
+            <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-600 flex items-center justify-center">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <DialogTitle className="text-lg font-bold">
+              Delete Customer Profile?
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Are you sure you want to delete the profile for{" "}
+              <strong className="text-foreground">{deleteCustomerTarget?.fullName}</strong> ({deleteCustomerTarget?.contactNumber})?
+              This will permanently remove this customer record and historical stays.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-3 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteCustomerTarget(null)}
+              disabled={deletingCustomer}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleDeleteCustomer}
+              disabled={deletingCustomer}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold gap-1.5"
+            >
+              {deletingCustomer ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Deleting...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete Customer</span>
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

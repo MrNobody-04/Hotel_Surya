@@ -495,3 +495,90 @@ export async function getHistoricalStays(filters?: {
     total,
   };
 }
+
+export async function deleteStay(
+  id: string,
+  userId: string,
+  userName: string,
+  deleteCustomerIfOrphaned: boolean = false
+) {
+  return await prisma.$transaction(async (tx) => {
+    const stay = await tx.stay.findUnique({
+      where: { id },
+      include: {
+        customer: true,
+        room: true,
+      },
+    });
+
+    if (!stay) {
+      throw new Error("Stay record not found");
+    }
+
+    const customerId = stay.customerId;
+    const roomId = stay.roomId;
+    const roomNumber = stay.room.roomNumber;
+    const guestName = stay.customer.fullName;
+    const wasActive = stay.status === "ACTIVE";
+
+    // Delete associated records
+    await tx.billItem.deleteMany({ where: { stayId: id } });
+    await tx.payment.deleteMany({ where: { stayId: id } });
+    await tx.accompanyingGuest.deleteMany({ where: { stayId: id } });
+
+    // Delete stay
+    await tx.stay.delete({
+      where: { id },
+    });
+
+    // Reset room status to AVAILABLE if the stay was ACTIVE and no other active stay remains
+    if (wasActive) {
+      const remainingActiveStay = await tx.stay.findFirst({
+        where: { roomId, status: "ACTIVE" },
+      });
+      if (!remainingActiveStay) {
+        await tx.room.update({
+          where: { id: roomId },
+          data: { status: "AVAILABLE" },
+        });
+      }
+    }
+
+    // Optionally clean up customer profile if they have no other stays
+    let customerDeleted = false;
+    if (deleteCustomerIfOrphaned) {
+      const otherStaysCount = await tx.stay.count({
+        where: { customerId },
+      });
+      if (otherStaysCount === 0) {
+        await tx.customer.delete({
+          where: { id: customerId },
+        });
+        customerDeleted = true;
+      }
+    }
+
+    // Audit log
+    await logAuditEvent({
+      userId,
+      userName,
+      action: "STAY_DELETED",
+      entity: "Stay",
+      entityId: id,
+      metadata: {
+        roomNumber,
+        guestName,
+        customerDeleted,
+        wasActive,
+      },
+    });
+
+    return {
+      id,
+      roomNumber,
+      guestName,
+      customerDeleted,
+      wasActive,
+    };
+  });
+}

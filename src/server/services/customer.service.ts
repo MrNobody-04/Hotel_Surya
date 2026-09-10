@@ -93,3 +93,46 @@ export async function updateCustomer(id: string, data: Partial<CreateCustomerInp
     },
   });
 }
+
+export async function deleteCustomer(id: string, userId: string, userName: string) {
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+    include: {
+      stays: {
+        select: { id: true, status: true, roomId: true },
+      },
+    },
+  });
+
+  if (!customer) {
+    throw new Error("Customer not found");
+  }
+
+  const activeStay = customer.stays.find((s) => s.status === "ACTIVE");
+  if (activeStay) {
+    throw new Error(
+      "Cannot delete customer who currently has an active stay in a room. Check out or cancel the stay first."
+    );
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    // Delete all historical stay records and related items for this customer
+    for (const stay of customer.stays) {
+      await tx.billItem.deleteMany({ where: { stayId: stay.id } });
+      await tx.payment.deleteMany({ where: { stayId: stay.id } });
+      await tx.accompanyingGuest.deleteMany({ where: { stayId: stay.id } });
+      await tx.stay.delete({ where: { id: stay.id } });
+    }
+
+    // Delete customer
+    await tx.customer.delete({
+      where: { id },
+    });
+
+    return {
+      success: true,
+      fullName: customer.fullName,
+      staysDeleted: customer.stays.length,
+    };
+  });
+}
