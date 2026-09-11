@@ -338,6 +338,30 @@ async function main() {
     ],
   });
 
+  // 9. Seed Dining Tables (Cabins & Halls)
+  const diningTables = [
+    { name: "Cabin 1", type: "CABIN", capacity: 4 },
+    { name: "Cabin 2", type: "CABIN", capacity: 4 },
+    { name: "Cabin 3", type: "CABIN", capacity: 6 },
+    { name: "Hall 1", type: "HALL", capacity: 6 },
+    { name: "Hall 2", type: "HALL", capacity: 8 },
+    { name: "Hall 3", type: "HALL", capacity: 8 },
+  ];
+
+  for (const dt of diningTables) {
+    await prisma.diningTable.upsert({
+      where: { name: dt.name },
+      update: { type: dt.type as any, capacity: dt.capacity },
+      create: {
+        name: dt.name,
+        type: dt.type as any,
+        capacity: dt.capacity,
+        status: "AVAILABLE" as any,
+      },
+    });
+  }
+  console.log("✅ Seeded Dining Tables (Cabins 1-3, Halls 1-3)");
+
   console.log("✅ Seed completed successfully for Hotel Surya! 🎉");
 }
 

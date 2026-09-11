@@ -111,7 +111,7 @@ export async function startDiningOrder(input: StartDiningOrderInput) {
         guestCount: Math.max(1, Number(input.guestCount) || 1),
         notes: input.notes?.trim() || null,
         totalAmount: initialTotal,
-        status: "ACTIVE",
+        status: "ACTIVE" as any,
         createdById: input.userId,
       },
     });
@@ -123,7 +123,7 @@ export async function startDiningOrder(input: StartDiningOrderInput) {
         await tx.diningOrderItem.create({
           data: {
             orderId: order.id,
-            category: item.category || "FOOD",
+            category: (item.category || "FOOD") as any,
             name: item.name.trim(),
             quantity: q,
             unitPrice: p,
@@ -137,7 +137,7 @@ export async function startDiningOrder(input: StartDiningOrderInput) {
     // Mark table as OCCUPIED
     await tx.diningTable.update({
       where: { id: input.tableId },
-      data: { status: "OCCUPIED" },
+      data: { status: "OCCUPIED" as any },
     });
 
     await logAuditEvent({
@@ -187,7 +187,7 @@ export async function addItemsToDiningOrder(
       await tx.diningOrderItem.create({
         data: {
           orderId,
-          category: item.category || "FOOD",
+          category: (item.category || "FOOD") as any,
           name: item.name.trim(),
           quantity: q,
           unitPrice: p,
@@ -288,9 +288,9 @@ export async function settleDiningOrder(
     const settled = await tx.diningOrder.update({
       where: { id: orderId },
       data: {
-        status: "COMPLETED",
+        status: "COMPLETED" as any,
         paidAmount: Number(payment.amount),
-        paymentMethod: payment.method,
+        paymentMethod: (payment.method as any) || null,
         notes: payment.notes?.trim() || order.notes,
         settledAt: new Date(),
       },
@@ -305,7 +305,7 @@ export async function settleDiningOrder(
     if (!otherActive) {
       await tx.diningTable.update({
         where: { id: order.tableId },
-        data: { status: "AVAILABLE" },
+        data: { status: "AVAILABLE" as any },
       });
     }
 
@@ -345,7 +345,7 @@ export async function cancelDiningOrder(
     const updated = await tx.diningOrder.update({
       where: { id: orderId },
       data: {
-        status: "CANCELLED",
+        status: "CANCELLED" as any,
         notes: reason ? `Cancelled: ${reason}` : order.notes,
       },
     });
@@ -358,7 +358,7 @@ export async function cancelDiningOrder(
     if (!otherActive) {
       await tx.diningTable.update({
         where: { id: order.tableId },
-        data: { status: "AVAILABLE" },
+        data: { status: "AVAILABLE" as any },
       });
     }
 
@@ -406,7 +406,7 @@ export async function deleteDiningOrder(
       if (!remainingActive) {
         await tx.diningTable.update({
           where: { id: tableId },
-          data: { status: "AVAILABLE" },
+          data: { status: "AVAILABLE" as any },
         });
       }
     }
@@ -429,7 +429,7 @@ export async function deleteDiningOrder(
 export async function getDiningOrderHistory(limit = 50, skip = 0) {
   const [orders, total] = await Promise.all([
     prisma.diningOrder.findMany({
-      where: { status: { in: ["COMPLETED", "CANCELLED"] } },
+      where: { status: { in: ["COMPLETED", "CANCELLED"] as any } },
       orderBy: { settledAt: "desc" },
       take: limit,
       skip,
@@ -439,7 +439,7 @@ export async function getDiningOrderHistory(limit = 50, skip = 0) {
       },
     }),
     prisma.diningOrder.count({
-      where: { status: { in: ["COMPLETED", "CANCELLED"] } },
+      where: { status: { in: ["COMPLETED", "CANCELLED"] as any } },
     }),
   ]);
 
