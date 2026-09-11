@@ -158,10 +158,10 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                      "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 active:scale-[0.98]",
                       isActive
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30 font-semibold"
+                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground hover:translate-x-1"
                     )}
                   >
                     <Icon className="w-4 h-4 shrink-0" />

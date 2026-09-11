@@ -27,25 +27,25 @@
   }
 
   .dark {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
-    --card: 224 71% 6%;
-    --card-foreground: 213 31% 91%;
-    --popover: 224 71% 6%;
-    --popover-foreground: 215 20.2% 65.1%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 222.2 47.4% 11.2%;
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+    --card: 222 40% 10.5%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 40% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 221.2 88% 58%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 16%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 223 47% 11%;
-    --muted-foreground: 215.4 16.3% 56.9%;
-    --accent: 216 34% 17%;
+    --muted: 217.2 32.6% 14%;
+    --muted-foreground: 215 20.2% 70%;
+    --accent: 217.2 32.6% 16%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 75% 55%;
     --destructive-foreground: 210 40% 98%;
-    --border: 216 34% 17%;
-    --input: 216 34% 17%;
-    --ring: 224 76% 48%;
+    --border: 217 28% 18%;
+    --input: 217 28% 20%;
+    --ring: 221.2 88% 58%;
   }
 }
 
@@ -58,6 +58,19 @@
     @apply bg-background text-foreground;
     overflow-x: hidden;
     overscroll-behavior-x: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer utilities {
+  .hover-lift {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-1px);
+  }
+  .hover-lift:active {
+    transform: translateY(0) scale(0.98);
   }
 }
 

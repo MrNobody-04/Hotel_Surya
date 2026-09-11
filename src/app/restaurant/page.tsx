@@ -22,6 +22,7 @@ import {
   Sparkles,
   Users,
   Check,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -35,6 +36,17 @@ import { formatCurrency, formatNepalDateTime, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { PaymentQrModal } from "@/components/billing/payment-qr-modal";
 import { BillItemCategory, PaymentMethod } from "@/types";
+
+const QUICK_CATEGORIES = [
+  { id: "ALL", label: "All Items" },
+  { id: "FOOD", label: "🍲 Food" },
+  { id: "DRINK", label: "🥤 Drinks" },
+  { id: "MOMO", label: "🥟 Momo" },
+  { id: "CHOWMIN", label: "🍜 Chowmin & Chopsy" },
+  { id: "KHANA", label: "🍛 Khana Set" },
+  { id: "SNACKS", label: "🍗 Snacks" },
+  { id: "BEERS", label: "🍺 Beers & Spirits" },
+];
 
 interface MenuItem {
   id: string;
@@ -95,7 +107,9 @@ export default function RestaurantPage() {
   const [orderNotes, setOrderNotes] = useState("");
   const [selectedTray, setSelectedTray] = useState<{ [name: string]: { item: MenuItem; qty: number; notes: string } }>({});
   const [menuSearch, setMenuSearch] = useState("");
-  const [menuFilterCategory, setMenuFilterCategory] = useState("ALL");
+  const [quickCategory, setQuickCategory] = useState("ALL");
+  const [showGuestDetails, setShowGuestDetails] = useState(false);
+  const [showCustomItem, setShowCustomItem] = useState(false);
   const [mobileOrderPane, setMobileOrderPane] = useState<"menu" | "tray">("menu");
   const [submittingOrder, setSubmittingOrder] = useState(false);
 
@@ -187,6 +201,9 @@ export default function RestaurantPage() {
     setOrderNotes("");
     setSelectedTray({});
     setMenuSearch("");
+    setQuickCategory("ALL");
+    setShowGuestDetails(false);
+    setShowCustomItem(false);
     setMobileOrderPane("menu");
     setOrderModalOpen(true);
   };
@@ -197,6 +214,9 @@ export default function RestaurantPage() {
     setIsAddingMore(true);
     setSelectedTray({});
     setMenuSearch("");
+    setQuickCategory("ALL");
+    setShowGuestDetails(false);
+    setShowCustomItem(false);
     setMobileOrderPane("menu");
     setOrderModalOpen(true);
   };
@@ -390,16 +410,55 @@ export default function RestaurantPage() {
   // Filtered menu list
   const filteredMenuItems = useMemo(() => {
     return menuItems.filter((it) => {
-      const matchesSearch = it.name.toLowerCase().includes(menuSearch.toLowerCase());
-      const matchesCat =
-        menuFilterCategory === "ALL"
-          ? true
-          : menuFilterCategory === "DRINK"
-          ? it.category === "DRINK"
-          : it.category === "FOOD";
+      const search = menuSearch.toLowerCase().trim();
+      const matchesSearch = !search || it.name.toLowerCase().includes(search);
+
+      let matchesCat = true;
+      if (quickCategory === "FOOD") {
+        matchesCat = it.category === "FOOD";
+      } else if (quickCategory === "DRINK") {
+        matchesCat = it.category === "DRINK";
+      } else if (quickCategory === "MOMO") {
+        matchesCat = it.name.toLowerCase().includes("momo");
+      } else if (quickCategory === "CHOWMIN") {
+        const n = it.name.toLowerCase();
+        matchesCat = n.includes("chowmin") || n.includes("thukpa") || n.includes("chopsy");
+      } else if (quickCategory === "KHANA") {
+        const n = it.name.toLowerCase();
+        matchesCat = n.includes("khana") || n.includes("rice") || n.includes("curry") || n.includes("dal");
+      } else if (quickCategory === "SNACKS") {
+        const n = it.name.toLowerCase();
+        matchesCat =
+          n.includes("chana") ||
+          n.includes("sadeko") ||
+          n.includes("peanut") ||
+          n.includes("chips") ||
+          n.includes("fry") ||
+          n.includes("chilli") ||
+          n.includes("bread") ||
+          n.includes("omlet") ||
+          n.includes("paratha") ||
+          n.includes("boiled") ||
+          n.includes("sekwa") ||
+          n.includes("pork") ||
+          n.includes("sukuti");
+      } else if (quickCategory === "BEERS") {
+        const n = it.name.toLowerCase();
+        matchesCat =
+          n.includes("beer") ||
+          n.includes("tuborg") ||
+          n.includes("gorkha") ||
+          n.includes("ruslan") ||
+          n.includes("whisky") ||
+          n.includes("vodka") ||
+          n.includes("rum") ||
+          n.includes("wine") ||
+          n.includes("cider");
+      }
+
       return matchesSearch && matchesCat;
     });
-  }, [menuItems, menuSearch, menuFilterCategory]);
+  }, [menuItems, menuSearch, quickCategory]);
 
   const cabins = tables.filter((t) => t.type === "CABIN");
   const halls = tables.filter((t) => t.type === "HALL");
@@ -777,25 +836,26 @@ export default function RestaurantPage() {
         </TabsContent>
       </Tabs>
 
-      {/* TAKE ORDER / ADD ITEMS DIALOG */}
+      {/* TAKE ORDER / ADD ITEMS DIALOG (Optimized for iPhone 15 Pro Max & Desktop) */}
       <Dialog open={orderModalOpen} onOpenChange={setOrderModalOpen}>
-        <DialogContent className="w-[96vw] max-w-4xl max-h-[92dvh] h-[92dvh] flex flex-col p-3 sm:p-6 overflow-hidden">
+        <DialogContent className="w-[98vw] max-w-4xl max-h-[94dvh] h-[94dvh] flex flex-col p-2.5 sm:p-5 overflow-hidden">
           <form onSubmit={handleSubmitOrder} className="flex flex-col flex-1 h-full min-h-0 overflow-hidden">
-            <DialogHeader className="shrink-0 pb-2 border-b">
+            {/* Dialog Header */}
+            <DialogHeader className="shrink-0 pb-1.5 sm:pb-2 border-b">
               <div className="flex items-center justify-between">
-                <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-bold">
-                  <Utensils className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                  <span>
+                <DialogTitle className="flex items-center gap-2 text-sm sm:text-base font-bold">
+                  <Utensils className="w-4 h-4 text-primary shrink-0" />
+                  <span className="truncate">
                     {isAddingMore
                       ? `Add Items — ${selectedTable?.name}`
                       : `New Order — ${selectedTable?.name}`}
                   </span>
                 </DialogTitle>
-                <Badge variant="purple" className="font-mono text-xs">
+                <Badge variant="purple" className="font-mono text-xs shrink-0">
                   {selectedTable?.name}
                 </Badge>
               </div>
-              <DialogDescription className="text-xs">
+              <DialogDescription className="text-[11px] sm:text-xs text-muted-foreground hidden sm:block">
                 {isAddingMore
                   ? "Select items from the official NEW HOTEL SURYA menu or enter custom kitchen orders"
                   : "Enter customer details and select food & drinks from the official menu"}
@@ -804,44 +864,134 @@ export default function RestaurantPage() {
 
             {/* Customer Details (only on new order) */}
             {!isAddingMore && (
-              <div className="p-2.5 sm:p-3 bg-muted/40 rounded-xl border grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 text-xs shrink-0 my-1.5">
-                <div className="space-y-1">
-                  <Label htmlFor="custName" className="text-[11px] font-semibold">Customer / Table Name</Label>
-                  <Input
-                    id="custName"
-                    placeholder="e.g. Cabin 1 or Guest Name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="h-8 text-xs font-medium"
-                    required
-                  />
+              <>
+                {/* Mobile View: Compact 1-line bar by default, expandable on tap */}
+                <div className="sm:hidden shrink-0 my-1">
+                  {!showGuestDetails ? (
+                    <div className="flex items-center justify-between px-2.5 py-1.5 bg-muted/40 rounded-lg border text-xs">
+                      <div className="flex items-center gap-1.5 overflow-hidden">
+                        <User className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span className="font-semibold truncate text-foreground text-xs">
+                          {customerName || selectedTable?.name}
+                        </span>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="text-muted-foreground shrink-0 text-[11px] font-mono">
+                          {guestCount} Guests
+                        </span>
+                        {customerPhone && (
+                          <>
+                            <span className="text-muted-foreground">•</span>
+                            <span className="text-muted-foreground font-mono text-[11px] truncate">
+                              {customerPhone}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowGuestDetails(true)}
+                        className="h-6 px-2 text-[11px] text-primary hover:text-primary shrink-0 gap-1 font-semibold"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        <span>Edit</span>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 bg-muted/40 rounded-xl border space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-xs text-foreground">Guest & Table Info</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowGuestDetails(false)}
+                          className="h-6 px-2 text-[11px] text-muted-foreground"
+                        >
+                          ✕ Close
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="custNameMob" className="text-[11px] font-semibold">Table / Customer Name *</Label>
+                          <Input
+                            id="custNameMob"
+                            placeholder="e.g. Cabin 1 or Guest Name"
+                            value={customerName}
+                            onChange={(e) => setCustomerName(e.target.value)}
+                            className="h-8 text-xs font-medium"
+                            required
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label htmlFor="custPhoneMob" className="text-[11px]">Phone (Optional)</Label>
+                            <Input
+                              id="custPhoneMob"
+                              placeholder="98XXXXXXXX"
+                              value={customerPhone}
+                              onChange={(e) => setCustomerPhone(e.target.value)}
+                              className="h-8 text-xs font-mono"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="gCountMob" className="text-[11px]">Guests</Label>
+                            <Input
+                              id="gCountMob"
+                              type="number"
+                              min="1"
+                              value={guestCount}
+                              onChange={(e) => setGuestCount(e.target.value)}
+                              className="h-8 text-xs font-mono"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="custPhone" className="text-[11px]">Phone (Optional)</Label>
-                  <Input
-                    id="custPhone"
-                    placeholder="e.g. 9848040883"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="h-8 text-xs"
-                  />
+
+                {/* Desktop View: 3-column inline row */}
+                <div className="hidden sm:grid grid-cols-3 gap-3 p-2.5 bg-muted/40 rounded-xl border text-xs shrink-0 my-1">
+                  <div className="space-y-1">
+                    <Label htmlFor="custName" className="text-[11px] font-semibold">Customer / Table Name</Label>
+                    <Input
+                      id="custName"
+                      placeholder="e.g. Cabin 1 or Guest Name"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="h-8 text-xs font-medium"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="custPhone" className="text-[11px]">Phone (Optional)</Label>
+                    <Input
+                      id="custPhone"
+                      placeholder="e.g. 9848040883"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="gCount" className="text-[11px]">Number of Guests</Label>
+                    <Input
+                      id="gCount"
+                      type="number"
+                      min="1"
+                      value={guestCount}
+                      onChange={(e) => setGuestCount(e.target.value)}
+                      className="h-8 text-xs font-mono"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="gCount" className="text-[11px]">Number of Guests</Label>
-                  <Input
-                    id="gCount"
-                    type="number"
-                    min="1"
-                    value={guestCount}
-                    onChange={(e) => setGuestCount(e.target.value)}
-                    className="h-8 text-xs font-mono"
-                  />
-                </div>
-              </div>
+              </>
             )}
 
             {/* Mobile Tab Switcher between Menu and Tray (Hidden on large screens) */}
-            <div className="lg:hidden flex items-center p-1 bg-muted/80 rounded-xl text-xs font-semibold shrink-0 gap-1 my-1 border">
+            <div className="lg:hidden flex items-center p-0.5 bg-muted/80 rounded-xl text-xs font-semibold shrink-0 gap-1 my-1 border">
               <button
                 type="button"
                 onClick={() => setMobileOrderPane("menu")}
@@ -853,7 +1003,7 @@ export default function RestaurantPage() {
                 )}
               >
                 <Search className="w-3.5 h-3.5 text-primary" />
-                <span>Menu Catalog ({filteredMenuItems.length})</span>
+                <span>Menu ({filteredMenuItems.length})</span>
               </button>
               <button
                 type="button"
@@ -867,7 +1017,7 @@ export default function RestaurantPage() {
               >
                 <Utensils className="w-3.5 h-3.5" />
                 <span>
-                  Order Tray ({Object.keys(selectedTray).length}) • {formatCurrency(trayTotal)}
+                  Tray ({Object.keys(selectedTray).length}) • {formatCurrency(trayTotal)}
                 </span>
               </button>
             </div>
@@ -881,34 +1031,55 @@ export default function RestaurantPage() {
                   mobileOrderPane !== "menu" && "hidden lg:flex"
                 )}
               >
-                {/* Search & Filter Bar */}
-                <div className="p-2 border-b bg-muted/20 flex flex-col sm:flex-row items-center gap-2 shrink-0">
-                  <div className="relative flex-1 w-full">
+                {/* Search & Category Filter Bar */}
+                <div className="p-2 border-b bg-muted/20 space-y-1.5 shrink-0">
+                  <div className="relative w-full">
                     <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
                     <Input
-                      placeholder="Search dishes & drinks (Momo, Chopsy, Beer...)"
+                      placeholder="Search dishes or drinks (Momo, Beer, Chopsy...)"
                       value={menuSearch}
                       onChange={(e) => setMenuSearch(e.target.value)}
-                      className="h-8 pl-8 text-xs"
+                      className="h-8 pl-8 pr-7 text-xs"
                     />
+                    {menuSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setMenuSearch("")}
+                        className="absolute right-2 top-2 text-muted-foreground hover:text-foreground text-xs"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
-                  <Select value={menuFilterCategory} onValueChange={setMenuFilterCategory}>
-                    <SelectTrigger className="h-8 text-xs w-full sm:w-28">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">All Items</SelectItem>
-                      <SelectItem value="FOOD">Food</SelectItem>
-                      <SelectItem value="DRINK">Drinks</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+                  {/* Horizontal Scrollable Category Chips */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar touch-pan-x">
+                    {QUICK_CATEGORIES.map((cat) => {
+                      const isSelected = quickCategory === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setQuickCategory(cat.id)}
+                          className={cn(
+                            "px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all shrink-0 border",
+                            isSelected
+                              ? "bg-primary text-primary-foreground border-primary shadow-xs font-bold"
+                              : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
+                          )}
+                        >
+                          {cat.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {/* Menu Items List */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-1.5 min-h-0">
+                {/* Scrollable Menu Items */}
+                <div className="flex-1 overflow-y-auto p-2 space-y-1.5 min-h-0 overscroll-contain">
                   {filteredMenuItems.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-muted-foreground">
-                      No menu items match &quot;{menuSearch}&quot;
+                    <div className="py-12 text-center text-xs text-muted-foreground">
+                      No dishes or drinks match &quot;{menuSearch}&quot;
                     </div>
                   ) : (
                     filteredMenuItems.map((item) => {
@@ -916,7 +1087,12 @@ export default function RestaurantPage() {
                       return (
                         <div
                           key={item.id}
-                          className="flex items-center justify-between p-2 sm:p-2.5 rounded-lg border hover:bg-muted/30 transition-colors text-xs"
+                          className={cn(
+                            "flex items-center justify-between p-2 sm:p-2.5 rounded-lg border transition-all text-xs",
+                            qtyInTray > 0
+                              ? "border-primary/50 bg-primary/5 shadow-xs"
+                              : "hover:bg-muted/30"
+                          )}
                         >
                           <div className="flex-1 min-w-0 pr-2">
                             <div className="font-semibold text-foreground truncate text-xs sm:text-sm">
@@ -929,17 +1105,17 @@ export default function RestaurantPage() {
 
                           <div className="flex items-center gap-1.5 shrink-0">
                             {qtyInTray > 0 ? (
-                              <div className="flex items-center gap-1 bg-primary/10 rounded-lg p-0.5 border border-primary/30">
+                              <div className="flex items-center gap-1 bg-background rounded-lg p-0.5 border border-primary/40 shadow-xs">
                                 <Button
                                   type="button"
                                   size="icon"
                                   variant="ghost"
                                   onClick={() => handleUpdateTrayQty(item.name, -1)}
-                                  className="h-7 w-7 text-xs font-bold"
+                                  className="h-7 w-7 text-xs font-bold hover:bg-destructive/10 hover:text-destructive"
                                 >
                                   -
                                 </Button>
-                                <span className="font-mono font-bold px-1.5 text-primary text-xs">
+                                <span className="font-mono font-bold px-1.5 text-primary text-xs min-w-[20px] text-center">
                                   {qtyInTray}
                                 </span>
                                 <Button
@@ -947,7 +1123,7 @@ export default function RestaurantPage() {
                                   size="icon"
                                   variant="ghost"
                                   onClick={() => handleUpdateTrayQty(item.name, 1)}
-                                  className="h-7 w-7 text-xs font-bold"
+                                  className="h-7 w-7 text-xs font-bold hover:bg-primary/10 hover:text-primary"
                                 >
                                   +
                                 </Button>
@@ -971,34 +1147,57 @@ export default function RestaurantPage() {
                   )}
                 </div>
 
-                {/* Custom Kitchen Item Accordion */}
-                <div className="p-2 border-t bg-muted/20 text-xs shrink-0">
-                  <div className="font-semibold text-[11px] text-muted-foreground mb-1">
-                    + Custom Item / Special Request:
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-1.5">
-                    <Input
-                      placeholder="Item name"
-                      value={customName}
-                      onChange={(e) => setCustomName(e.target.value)}
-                      className="sm:col-span-6 h-7 text-xs"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Price"
-                      value={customPrice}
-                      onChange={(e) => setCustomPrice(e.target.value)}
-                      className="sm:col-span-3 h-7 text-xs font-mono font-bold"
-                    />
-                    <Button
+                {/* Collapsible Custom Kitchen Item */}
+                <div className="p-2 border-t bg-muted/20 shrink-0">
+                  {!showCustomItem ? (
+                    <button
                       type="button"
-                      size="sm"
-                      onClick={handleAddCustomToTray}
-                      className="sm:col-span-3 h-7 text-xs bg-muted-foreground/20 hover:bg-muted-foreground/30 text-foreground font-medium"
+                      onClick={() => setShowCustomItem(true)}
+                      className="w-full py-1.5 px-3 rounded-lg border border-dashed border-primary/40 hover:border-primary text-primary hover:bg-primary/5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
                     >
-                      Add Custom
-                    </Button>
-                  </div>
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Custom Off-Menu Item</span>
+                    </button>
+                  ) : (
+                    <div className="space-y-2 p-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-xs text-foreground">Custom Kitchen Order:</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowCustomItem(false)}
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          ✕ Close
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-1.5">
+                        <Input
+                          placeholder="Item name (e.g. Special Salad)"
+                          value={customName}
+                          onChange={(e) => setCustomName(e.target.value)}
+                          className="sm:col-span-6 h-8 text-xs"
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Price"
+                          value={customPrice}
+                          onChange={(e) => setCustomPrice(e.target.value)}
+                          className="sm:col-span-3 h-8 text-xs font-mono font-bold"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            handleAddCustomToTray();
+                            setShowCustomItem(false);
+                          }}
+                          className="sm:col-span-3 h-8 text-xs font-semibold"
+                        >
+                          Add to Tray
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1022,16 +1221,26 @@ export default function RestaurantPage() {
                       onClick={() => setSelectedTray({})}
                       className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-destructive"
                     >
-                      Clear
+                      Clear Tray
                     </Button>
                   )}
                 </div>
 
                 {/* Tray Items */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-1.5 min-h-0">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1.5 min-h-0 overscroll-contain">
                   {Object.keys(selectedTray).length === 0 ? (
-                    <div className="py-12 text-center text-xs text-muted-foreground">
-                      Tray is empty. Tap items from the menu on the left to add.
+                    <div className="py-12 text-center text-xs text-muted-foreground space-y-2">
+                      <p>Tray is empty.</p>
+                      <p className="text-[11px]">Select dishes from the menu catalog to add.</p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setMobileOrderPane("menu")}
+                        className="lg:hidden text-xs mt-2"
+                      >
+                        ← Go to Menu Catalog
+                      </Button>
                     </div>
                   ) : (
                     Object.values(selectedTray).map(({ item, qty }) => (
@@ -1061,7 +1270,7 @@ export default function RestaurantPage() {
                           >
                             -
                           </Button>
-                          <span className="font-mono font-bold px-1 text-xs">{qty}</span>
+                          <span className="font-mono font-bold px-1 text-xs min-w-[18px] text-center">{qty}</span>
                           <Button
                             type="button"
                             size="icon"
@@ -1090,7 +1299,7 @@ export default function RestaurantPage() {
             </div>
 
             {/* Bottom Form Actions */}
-            <div className="pt-2.5 border-t bg-background flex items-center justify-between gap-2 shrink-0 mt-auto">
+            <div className="pt-2 border-t bg-background flex items-center justify-between gap-2 shrink-0 mt-auto">
               <Button
                 type="button"
                 variant="outline"
@@ -1110,7 +1319,18 @@ export default function RestaurantPage() {
                     className="lg:hidden h-9 px-2.5 text-xs gap-1 border-primary/40 text-primary font-semibold"
                   >
                     <Utensils className="w-3.5 h-3.5" />
-                    <span>View Tray ({Object.keys(selectedTray).length})</span>
+                    <span>Tray ({Object.keys(selectedTray).length})</span>
+                  </Button>
+                )}
+
+                {mobileOrderPane === "tray" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setMobileOrderPane("menu")}
+                    className="lg:hidden h-9 px-2.5 text-xs gap-1"
+                  >
+                    <span>← Menu</span>
                   </Button>
                 )}
 
@@ -1124,7 +1344,7 @@ export default function RestaurantPage() {
                     {submittingOrder
                       ? "Saving..."
                       : isAddingMore
-                      ? `Add to ${selectedTable?.name} (${formatCurrency(trayTotal)})`
+                      ? `Add (${formatCurrency(trayTotal)})`
                       : `Place Order (${formatCurrency(trayTotal)})`}
                   </span>
                 </Button>
@@ -1156,20 +1376,20 @@ export default function RestaurantPage() {
               </DialogHeader>
 
               {/* Items List Table */}
-              <div className="w-full overflow-x-auto overflow-y-auto max-h-[44vh] border rounded-lg max-w-full flex-1 min-h-0">
-                <table className="w-full min-w-[460px] text-sm text-left">
-                  <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b sticky top-0 bg-background">
+              <div className="w-full overflow-y-auto max-h-[44vh] border rounded-lg max-w-full flex-1 min-h-0">
+                <table className="w-full text-xs sm:text-sm text-left">
+                  <thead className="text-[11px] sm:text-xs uppercase bg-muted/50 text-muted-foreground border-b sticky top-0 bg-background">
                     <tr>
-                      <th className="px-3 py-2">Item</th>
-                      <th className="px-3 py-2 text-center">Qty</th>
-                      <th className="px-3 py-2 text-right">Unit Price</th>
-                      <th className="px-3 py-2 text-right">Total</th>
+                      <th className="px-2.5 py-2">Item</th>
+                      <th className="px-1.5 py-2 text-center">Qty</th>
+                      <th className="px-2 py-2 text-right">Rate</th>
+                      <th className="px-2.5 py-2 text-right">Total</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-xs">
                     {activeBillTable.activeOrder.items.map((it, idx) => (
                       <tr key={it.id || idx} className="hover:bg-muted/20">
-                        <td className="px-3 py-2 font-medium">
+                        <td className="px-2.5 py-2 font-medium">
                           {it.name}
                           {it.notes && (
                             <span className="block text-[10px] text-muted-foreground italic">
