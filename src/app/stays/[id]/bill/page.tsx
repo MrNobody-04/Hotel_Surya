@@ -462,8 +462,8 @@ export default function StayBillPage({
               )}
             </div>
 
-            <div className="border rounded-lg overflow-hidden">
-              <table className="w-full text-sm text-left">
+            <div className="w-full overflow-x-auto border rounded-lg max-w-full">
+              <table className="w-full min-w-[540px] text-sm text-left">
                 <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
                   <tr>
                     <th className="px-3 py-2.5">Category</th>
@@ -558,8 +558,8 @@ export default function StayBillPage({
                 No payments recorded yet for this stay.
               </div>
             ) : (
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm text-left">
+              <div className="w-full overflow-x-auto border rounded-lg max-w-full">
+                <table className="w-full min-w-[500px] text-sm text-left">
                   <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
                     <tr>
                       <th className="px-3 py-2">Timestamp (Nepal Time)</th>
@@ -671,8 +671,8 @@ export default function StayBillPage({
 
       {/* Multi-Item Batch Add Modal */}
       <Dialog open={itemModalOpen} onOpenChange={setItemModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-6">
-          <form onSubmit={handleAddBatchItems} className="flex flex-col flex-1 overflow-hidden space-y-4">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6 overflow-x-hidden">
+          <form onSubmit={handleAddBatchItems} className="flex flex-col flex-1 overflow-x-hidden space-y-4">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Utensils className="w-5 h-5 text-primary" />
@@ -711,11 +711,11 @@ export default function StayBillPage({
             )}
 
             {/* Dynamic Items List */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-3 pr-1">
               {itemsList.map((item, index) => (
                 <div
                   key={item.id}
-                  className="p-3 bg-card border rounded-xl space-y-2 relative shadow-sm"
+                  className="p-3 bg-card border rounded-xl space-y-2 relative shadow-sm overflow-hidden"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-muted-foreground">
@@ -737,7 +737,7 @@ export default function StayBillPage({
 
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
                     {/* Category */}
-                    <div className="sm:col-span-3">
+                    <div className="sm:col-span-3 min-w-0">
                       <Label className="text-[10px] text-muted-foreground">Category</Label>
                       <Select
                         value={item.category}
@@ -756,7 +756,7 @@ export default function StayBillPage({
                     </div>
 
                     {/* Name */}
-                    <div className="sm:col-span-4">
+                    <div className="sm:col-span-4 min-w-0">
                       <Label className="text-[10px] text-muted-foreground">Item Name *</Label>
                       <Input
                         className="h-8 text-xs"
@@ -768,7 +768,7 @@ export default function StayBillPage({
                     </div>
 
                     {/* Qty */}
-                    <div className="sm:col-span-2">
+                    <div className="sm:col-span-2 min-w-0">
                       <Label className="text-[10px] text-muted-foreground">Qty *</Label>
                       <Input
                         type="number"
@@ -787,7 +787,7 @@ export default function StayBillPage({
                     </div>
 
                     {/* Unit Price */}
-                    <div className="sm:col-span-3">
+                    <div className="sm:col-span-3 min-w-0">
                       <Label className="text-[10px] text-muted-foreground">Price (NPR) *</Label>
                       <Input
                         type="number"
@@ -802,9 +802,9 @@ export default function StayBillPage({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs pt-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs pt-1 gap-2">
                     <Input
-                      className="h-7 text-[11px] max-w-sm"
+                      className="h-7 text-[11px] w-full sm:max-w-sm"
                       placeholder="Notes (optional, e.g. Less spicy, Room delivery)"
                       value={item.notes || ""}
                       onChange={(e) => handleUpdateItemRow(item.id, "notes", e.target.value)}

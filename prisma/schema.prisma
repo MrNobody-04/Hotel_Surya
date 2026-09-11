@@ -256,3 +256,72 @@ model AuditLog {
   @@index([entity])
   @@index([userId])
 }
+
+enum DiningAreaType {
+  CABIN
+  HALL
+}
+
+enum DiningOrderStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model DiningTable {
+  id        String         @id @default(cuid())
+  name      String         @unique // "Cabin 1", "Cabin 2", "Cabin 3", "Hall 1", "Hall 2", "Hall 3"
+  type      DiningAreaType @default(CABIN)
+  status    RoomStatus     @default(AVAILABLE) // AVAILABLE, OCCUPIED
+  capacity  Int            @default(4)
+  notes     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  orders    DiningOrder[]
+
+  @@index([name])
+  @@index([status])
+  @@index([type])
+}
+
+model DiningOrder {
+  id            String            @id @default(cuid())
+  tableId       String
+  table         DiningTable       @relation(fields: [tableId], references: [id])
+  customerName  String?
+  customerPhone String?
+  guestCount    Int               @default(1)
+  status        DiningOrderStatus @default(ACTIVE)
+  totalAmount   Float             @default(0)
+  paidAmount    Float             @default(0)
+  paymentMethod PaymentMethod?
+  notes         String?
+  createdById   String?
+  settledAt     DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  items         DiningOrderItem[]
+
+  @@index([tableId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([settledAt])
+}
+
+model DiningOrderItem {
+  id        String           @id @default(cuid())
+  orderId   String
+  order     DiningOrder      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  category  BillItemCategory @default(FOOD)
+  name      String
+  quantity  Int              @default(1)
+  unitPrice Float
+  total     Float
+  notes     String?
+  createdAt DateTime         @default(now())
+
+  @@index([orderId])
+}
+

@@ -118,17 +118,17 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Action Buttons Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+        <Link href="/restaurant">
+          <Button variant="outline" className="w-full justify-start gap-2 h-11 text-xs border-orange-500/30 hover:bg-orange-50 dark:hover:bg-orange-950/30">
+            <Utensils className="w-4 h-4 text-orange-600" />
+            <span>Cabins & Dining</span>
+          </Button>
+        </Link>
         <Link href="/check-in">
           <Button variant="outline" className="w-full justify-start gap-2 h-11 text-xs">
             <UserPlus className="w-4 h-4 text-emerald-600" />
             <span>Check In</span>
-          </Button>
-        </Link>
-        <Link href="/customers">
-          <Button variant="outline" className="w-full justify-start gap-2 h-11 text-xs">
-            <Users className="w-4 h-4 text-blue-600" />
-            <span>Customers</span>
           </Button>
         </Link>
         <Link href="/guests">
@@ -141,6 +141,12 @@ export default function DashboardPage() {
           <Button variant="outline" className="w-full justify-start gap-2 h-11 text-xs">
             <CheckCircle2 className="w-4 h-4 text-cyan-600" />
             <span>View 7 Rooms</span>
+          </Button>
+        </Link>
+        <Link href="/customers">
+          <Button variant="outline" className="w-full justify-start gap-2 h-11 text-xs">
+            <Users className="w-4 h-4 text-blue-600" />
+            <span>Customers</span>
           </Button>
         </Link>
         <Link href="/expenses">

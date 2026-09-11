@@ -16,6 +16,7 @@ import {
   ShieldAlert,
   UserCog,
   Hotel,
+  Utensils,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SessionUser } from "@/types";
@@ -37,6 +38,12 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
           label: "Dashboard",
           href: "/",
           icon: LayoutDashboard,
+          show: true,
+        },
+        {
+          label: "Restaurant & Cabins",
+          href: "/restaurant",
+          icon: Utensils,
           show: true,
         },
         {
