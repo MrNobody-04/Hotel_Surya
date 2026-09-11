@@ -128,7 +128,7 @@ export default function AnalyticsPage() {
             Financial & Operational Analytics
           </h1>
           <p className="text-sm text-muted-foreground">
-            Performance metrics, revenue sources, and room utilization for Hotel Surya
+            Performance metrics, revenue sources, and room utilization for NEW HOTEL SURYA
           </p>
         </div>
 

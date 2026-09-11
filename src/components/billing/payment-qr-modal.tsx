@@ -50,7 +50,7 @@ export function PaymentQrModal({
             Scan to Pay via QR
           </DialogTitle>
           <DialogDescription className="text-center text-xs">
-            {roomNumber ? `Room ${roomNumber}` : "Hotel Surya Settlement"}
+            {roomNumber ? `Room ${roomNumber}` : "NEW HOTEL SURYA Settlement"}
             {guestName ? ` • Guest: ${guestName}` : ""}
           </DialogDescription>
         </DialogHeader>
@@ -71,7 +71,7 @@ export function PaymentQrModal({
         <div className="my-2 p-3 bg-white rounded-2xl border-2 border-emerald-500/30 shadow-md flex flex-col items-center">
           <img
             src="/images/nabil-qr.jpg"
-            alt="Hotel Surya Nabil Bank QR Code"
+            alt="NEW HOTEL SURYA Nabil Bank QR Code"
             className="w-full max-w-[260px] h-auto object-contain rounded-xl"
           />
         </div>

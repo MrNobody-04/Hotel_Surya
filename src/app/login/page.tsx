@@ -59,7 +59,7 @@ export default function LoginPage() {
             <Hotel className="w-8 h-8" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            HOTEL SURYA
+            NEW HOTEL SURYA
           </h1>
           <p className="text-sm text-muted-foreground">
             Hotel Operations & Management Platform
@@ -133,7 +133,7 @@ export default function LoginPage() {
             <span>Internal authorized access only • IP logged & rate-limited</span>
           </div>
           <p className="text-[11px]">
-            © {new Date().getFullYear()} Hotel Surya. All Rights Reserved. • Developed by <span className="font-semibold text-foreground">SujanGC</span>
+            © {new Date().getFullYear()} NEW HOTEL SURYA. All Rights Reserved. • Developed by <span className="font-semibold text-foreground">SujanGC</span>
           </p>
         </div>
       </div>

@@ -122,14 +122,14 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
 
   return (
     <aside className="w-64 border-r bg-card flex flex-col h-full shrink-0 select-none">
-      {/* Hotel Surya Brand Header */}
+      {/* NEW HOTEL SURYA Brand Header */}
       <div className="h-14 flex items-center gap-3 px-6 border-b">
         <div className="p-1.5 rounded-lg bg-primary text-primary-foreground">
           <Hotel className="w-5 h-5" />
         </div>
         <div>
           <h1 className="font-bold text-sm tracking-tight text-foreground">
-            HOTEL SURYA
+            NEW HOTEL SURYA
           </h1>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
             Operations Platform
@@ -184,7 +184,7 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
           <span className="font-mono text-[11px]">v1.0.0</span>
         </div>
         <div className="pt-2 border-t border-border/50 text-[10px] text-muted-foreground text-center">
-          © {new Date().getFullYear()} Hotel Surya<br />
+          © {new Date().getFullYear()} NEW HOTEL SURYA<br />
           Developed by <span className="font-semibold text-foreground">SujanGC</span>
         </div>
       </div>

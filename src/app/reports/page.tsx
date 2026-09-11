@@ -179,7 +179,7 @@ export default function ReportsPage() {
       <Card className="p-6 bg-muted/30 border text-xs text-muted-foreground space-y-2">
         <div className="font-semibold text-sm text-foreground flex items-center gap-2">
           <FileText className="w-4 h-4 text-primary" />
-          <span>Hotel Surya Financial Reporting Standards</span>
+          <span>NEW HOTEL SURYA Financial Reporting Standards</span>
         </div>
         <p>
           All exported records maintain historical data integrity. Changing catalog prices or room defaults does not retroactively alter checked-out bills or historical ledger statements. Timestamps represent official Nepal Standard Time (NPT, UTC+5:45).

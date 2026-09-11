@@ -130,7 +130,7 @@ export default function CurrentGuestsPage() {
           <p className="text-xs max-w-sm mx-auto mt-1 mb-4">
             {search
               ? "No guests match your search criteria."
-              : "There are currently no active stays at Hotel Surya. All rooms are ready for check-in."}
+              : "There are currently no active stays at NEW HOTEL SURYA. All rooms are ready for check-in."}
           </p>
           {!search && (
             <Link href="/check-in">

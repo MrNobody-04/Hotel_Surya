@@ -67,7 +67,7 @@ export function AppShell({ user, children }: AppShellProps) {
         <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-x-none p-4 md:p-6 lg:p-8 flex flex-col justify-between">
           <div className="mx-auto max-w-7xl w-full overflow-x-hidden">{children}</div>
           <footer className="mt-12 pt-6 pb-2 border-t text-center text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Hotel Surya. All Rights Reserved. • Developed by <span className="font-semibold text-foreground">SujanGC</span>
+            © {new Date().getFullYear()} NEW HOTEL SURYA. All Rights Reserved. • Developed by <span className="font-semibold text-foreground">SujanGC</span>
           </footer>
         </main>
       </div>

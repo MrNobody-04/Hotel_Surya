@@ -94,7 +94,7 @@ export function Header({ user, onMobileMenuToggle }: HeaderProps) {
 
       <div className="flex items-center gap-2 md:hidden">
         <span className="font-bold text-sm tracking-tight text-primary">
-          HOTEL SURYA
+          NEW HOTEL SURYA
         </span>
       </div>
 

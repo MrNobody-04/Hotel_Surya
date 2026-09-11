@@ -8,9 +8,9 @@ import { getSessionUser } from "@/server/auth/session";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Hotel Surya — Hotel Operations & Management Platform",
+  title: "NEW HOTEL SURYA — Hotel Operations & Management Platform",
   description:
-    "Production-grade internal operations and management platform for Hotel Surya.",
+    "Production-grade internal operations and management platform for NEW HOTEL SURYA.",
 };
 
 export default async function RootLayout({

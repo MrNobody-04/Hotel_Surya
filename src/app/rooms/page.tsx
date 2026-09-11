@@ -126,7 +126,7 @@ export default function RoomsPage() {
             Room Management
           </h1>
           <p className="text-sm text-muted-foreground">
-            Hotel Surya Inventory • 7 Rooms (2 AC, 5 Non-AC)
+            NEW HOTEL SURYA Inventory • 7 Rooms (2 AC, 5 Non-AC)
           </p>
         </div>
 

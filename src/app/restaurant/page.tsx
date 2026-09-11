@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Sparkles,
   Users,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -30,7 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatCurrency, formatNepalDateTime } from "@/lib/utils";
+import { formatCurrency, formatNepalDateTime, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { PaymentQrModal } from "@/components/billing/payment-qr-modal";
 import { BillItemCategory, PaymentMethod } from "@/types";
@@ -95,6 +96,7 @@ export default function RestaurantPage() {
   const [selectedTray, setSelectedTray] = useState<{ [name: string]: { item: MenuItem; qty: number; notes: string } }>({});
   const [menuSearch, setMenuSearch] = useState("");
   const [menuFilterCategory, setMenuFilterCategory] = useState("ALL");
+  const [mobileOrderPane, setMobileOrderPane] = useState<"menu" | "tray">("menu");
   const [submittingOrder, setSubmittingOrder] = useState(false);
 
   // Custom Item Inputs
@@ -179,12 +181,13 @@ export default function RestaurantPage() {
   const handleOpenNewOrder = (table: TableData) => {
     setSelectedTable(table);
     setIsAddingMore(false);
-    setCustomerName("");
+    setCustomerName(table.name); // Automatically take Table or Hall name!
     setCustomerPhone("");
     setGuestCount(String(table.capacity || 2));
     setOrderNotes("");
     setSelectedTray({});
     setMenuSearch("");
+    setMobileOrderPane("menu");
     setOrderModalOpen(true);
   };
 
@@ -194,6 +197,7 @@ export default function RestaurantPage() {
     setIsAddingMore(true);
     setSelectedTray({});
     setMenuSearch("");
+    setMobileOrderPane("menu");
     setOrderModalOpen(true);
   };
 
@@ -462,7 +466,7 @@ export default function RestaurantPage() {
               <span className="text-xs text-muted-foreground">3 Private Cabins</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {cabins.map((table) => {
                 const isOccupied = table.status === "OCCUPIED" && table.activeOrder;
                 return (
@@ -583,7 +587,7 @@ export default function RestaurantPage() {
               <span className="text-xs text-muted-foreground">3 Dining Halls</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {halls.map((table) => {
                 const isOccupied = table.status === "OCCUPIED" && table.activeOrder;
                 return (
@@ -775,16 +779,16 @@ export default function RestaurantPage() {
 
       {/* TAKE ORDER / ADD ITEMS DIALOG */}
       <Dialog open={orderModalOpen} onOpenChange={setOrderModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-4 sm:p-6 overflow-x-hidden">
-          <form onSubmit={handleSubmitOrder} className="flex flex-col flex-1 overflow-x-hidden space-y-4">
-            <DialogHeader>
+        <DialogContent className="w-[96vw] max-w-4xl max-h-[92dvh] h-[92dvh] flex flex-col p-3 sm:p-6 overflow-hidden">
+          <form onSubmit={handleSubmitOrder} className="flex flex-col flex-1 h-full min-h-0 overflow-hidden">
+            <DialogHeader className="shrink-0 pb-2 border-b">
               <div className="flex items-center justify-between">
-                <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-                  <Utensils className="w-5 h-5 text-primary" />
+                <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-bold">
+                  <Utensils className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                   <span>
                     {isAddingMore
-                      ? `Add Items to Order — ${selectedTable?.name}`
-                      : `New Dining Order — ${selectedTable?.name}`}
+                      ? `Add Items — ${selectedTable?.name}`
+                      : `New Order — ${selectedTable?.name}`}
                   </span>
                 </DialogTitle>
                 <Badge variant="purple" className="font-mono text-xs">
@@ -793,22 +797,23 @@ export default function RestaurantPage() {
               </div>
               <DialogDescription className="text-xs">
                 {isAddingMore
-                  ? "Select items from the official Hotel Surya menu or enter custom kitchen orders"
+                  ? "Select items from the official NEW HOTEL SURYA menu or enter custom kitchen orders"
                   : "Enter customer details and select food & drinks from the official menu"}
               </DialogDescription>
             </DialogHeader>
 
             {/* Customer Details (only on new order) */}
             {!isAddingMore && (
-              <div className="p-3 bg-muted/40 rounded-xl border grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="p-2.5 sm:p-3 bg-muted/40 rounded-xl border grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 text-xs shrink-0 my-1.5">
                 <div className="space-y-1">
-                  <Label htmlFor="custName" className="text-[11px]">Customer / Table Name</Label>
+                  <Label htmlFor="custName" className="text-[11px] font-semibold">Customer / Table Name</Label>
                   <Input
                     id="custName"
-                    placeholder="e.g. Sujan GC or Table 1"
+                    placeholder="e.g. Cabin 1 or Guest Name"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     className="h-8 text-xs font-medium"
+                    required
                   />
                 </div>
                 <div className="space-y-1">
@@ -835,23 +840,60 @@ export default function RestaurantPage() {
               </div>
             )}
 
+            {/* Mobile Tab Switcher between Menu and Tray (Hidden on large screens) */}
+            <div className="lg:hidden flex items-center p-1 bg-muted/80 rounded-xl text-xs font-semibold shrink-0 gap-1 my-1 border">
+              <button
+                type="button"
+                onClick={() => setMobileOrderPane("menu")}
+                className={cn(
+                  "flex-1 py-1.5 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 text-xs",
+                  mobileOrderPane === "menu"
+                    ? "bg-background text-foreground shadow-sm font-bold border"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Search className="w-3.5 h-3.5 text-primary" />
+                <span>Menu Catalog ({filteredMenuItems.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileOrderPane("tray")}
+                className={cn(
+                  "flex-1 py-1.5 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 text-xs",
+                  mobileOrderPane === "tray"
+                    ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Utensils className="w-3.5 h-3.5" />
+                <span>
+                  Order Tray ({Object.keys(selectedTray).length}) • {formatCurrency(trayTotal)}
+                </span>
+              </button>
+            </div>
+
             {/* Main Menu & Tray Split Screen */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 overflow-hidden min-h-[360px]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 overflow-hidden min-h-0 my-1">
               {/* Left Column: Menu Catalog Picker */}
-              <div className="lg:col-span-7 flex flex-col border rounded-xl overflow-hidden bg-background">
+              <div
+                className={cn(
+                  "lg:col-span-7 flex flex-col border rounded-xl overflow-hidden bg-background h-full min-h-0",
+                  mobileOrderPane !== "menu" && "hidden lg:flex"
+                )}
+              >
                 {/* Search & Filter Bar */}
-                <div className="p-2.5 border-b bg-muted/20 flex flex-col sm:flex-row items-center gap-2">
+                <div className="p-2 border-b bg-muted/20 flex flex-col sm:flex-row items-center gap-2 shrink-0">
                   <div className="relative flex-1 w-full">
-                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-2 text-muted-foreground" />
+                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
                     <Input
-                      placeholder="Search 90+ official Surya items (Momo, Chowmein, Khana...)"
+                      placeholder="Search dishes & drinks (Momo, Chopsy, Beer...)"
                       value={menuSearch}
                       onChange={(e) => setMenuSearch(e.target.value)}
-                      className="h-7.5 pl-8 text-xs"
+                      className="h-8 pl-8 text-xs"
                     />
                   </div>
                   <Select value={menuFilterCategory} onValueChange={setMenuFilterCategory}>
-                    <SelectTrigger className="h-7.5 text-xs w-full sm:w-28">
+                    <SelectTrigger className="h-8 text-xs w-full sm:w-28">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -863,7 +905,7 @@ export default function RestaurantPage() {
                 </div>
 
                 {/* Menu Items List */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-1.5 max-h-[320px]">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1.5 min-h-0">
                   {filteredMenuItems.length === 0 ? (
                     <div className="py-8 text-center text-xs text-muted-foreground">
                       No menu items match &quot;{menuSearch}&quot;
@@ -874,10 +916,10 @@ export default function RestaurantPage() {
                       return (
                         <div
                           key={item.id}
-                          className="flex items-center justify-between p-2 rounded-lg border hover:bg-muted/30 transition-colors text-xs"
+                          className="flex items-center justify-between p-2 sm:p-2.5 rounded-lg border hover:bg-muted/30 transition-colors text-xs"
                         >
                           <div className="flex-1 min-w-0 pr-2">
-                            <div className="font-semibold text-foreground truncate">
+                            <div className="font-semibold text-foreground truncate text-xs sm:text-sm">
                               {item.name}
                             </div>
                             <div className="text-muted-foreground font-mono text-[11px]">
@@ -893,7 +935,7 @@ export default function RestaurantPage() {
                                   size="icon"
                                   variant="ghost"
                                   onClick={() => handleUpdateTrayQty(item.name, -1)}
-                                  className="h-6 w-6 text-xs font-bold"
+                                  className="h-7 w-7 text-xs font-bold"
                                 >
                                   -
                                 </Button>
@@ -905,7 +947,7 @@ export default function RestaurantPage() {
                                   size="icon"
                                   variant="ghost"
                                   onClick={() => handleUpdateTrayQty(item.name, 1)}
-                                  className="h-6 w-6 text-xs font-bold"
+                                  className="h-7 w-7 text-xs font-bold"
                                 >
                                   +
                                 </Button>
@@ -916,7 +958,7 @@ export default function RestaurantPage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleAddItemToTray(item)}
-                                className="h-7 text-xs px-2.5 gap-1 hover:border-primary hover:text-primary"
+                                className="h-7 text-xs px-2.5 gap-1 hover:border-primary hover:text-primary font-medium"
                               >
                                 <Plus className="w-3 h-3" />
                                 <span>Add</span>
@@ -930,8 +972,8 @@ export default function RestaurantPage() {
                 </div>
 
                 {/* Custom Kitchen Item Accordion */}
-                <div className="p-2 border-t bg-muted/20 text-xs">
-                  <div className="font-semibold text-[11px] text-muted-foreground mb-1.5">
+                <div className="p-2 border-t bg-muted/20 text-xs shrink-0">
+                  <div className="font-semibold text-[11px] text-muted-foreground mb-1">
                     + Custom Item / Special Request:
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-1.5">
@@ -952,7 +994,7 @@ export default function RestaurantPage() {
                       type="button"
                       size="sm"
                       onClick={handleAddCustomToTray}
-                      className="sm:col-span-3 h-7 text-xs bg-muted-foreground/20 hover:bg-muted-foreground/30 text-foreground"
+                      className="sm:col-span-3 h-7 text-xs bg-muted-foreground/20 hover:bg-muted-foreground/30 text-foreground font-medium"
                     >
                       Add Custom
                     </Button>
@@ -961,8 +1003,13 @@ export default function RestaurantPage() {
               </div>
 
               {/* Right Column: Order Tray */}
-              <div className="lg:col-span-5 flex flex-col border-2 border-primary/30 rounded-xl overflow-hidden bg-muted/10">
-                <div className="p-2.5 border-b bg-primary/10 flex items-center justify-between">
+              <div
+                className={cn(
+                  "lg:col-span-5 flex flex-col border-2 border-primary/30 rounded-xl overflow-hidden bg-muted/10 h-full min-h-0",
+                  mobileOrderPane !== "tray" && "hidden lg:flex"
+                )}
+              >
+                <div className="p-2.5 border-b bg-primary/10 flex items-center justify-between shrink-0">
                   <div className="font-bold text-xs flex items-center gap-1.5 text-primary">
                     <Utensils className="w-3.5 h-3.5" />
                     <span>Order Tray ({Object.keys(selectedTray).length} items)</span>
@@ -973,7 +1020,7 @@ export default function RestaurantPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setSelectedTray({})}
-                      className="h-5 px-1 text-[10px] text-muted-foreground hover:text-destructive"
+                      className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-destructive"
                     >
                       Clear
                     </Button>
@@ -981,10 +1028,10 @@ export default function RestaurantPage() {
                 </div>
 
                 {/* Tray Items */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-1.5 max-h-[320px]">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1.5 min-h-0">
                   {Object.keys(selectedTray).length === 0 ? (
                     <div className="py-12 text-center text-xs text-muted-foreground">
-                      Tray is empty. Click items from the menu on the left to add.
+                      Tray is empty. Tap items from the menu on the left to add.
                     </div>
                   ) : (
                     Object.values(selectedTray).map(({ item, qty }) => (
@@ -1010,7 +1057,7 @@ export default function RestaurantPage() {
                             size="icon"
                             variant="outline"
                             onClick={() => handleUpdateTrayQty(item.name, -1)}
-                            className="h-6 w-6 text-xs"
+                            className="h-7 w-7 text-xs"
                           >
                             -
                           </Button>
@@ -1020,7 +1067,7 @@ export default function RestaurantPage() {
                             size="icon"
                             variant="outline"
                             onClick={() => handleUpdateTrayQty(item.name, 1)}
-                            className="h-6 w-6 text-xs"
+                            className="h-7 w-7 text-xs"
                           >
                             +
                           </Button>
@@ -1031,11 +1078,11 @@ export default function RestaurantPage() {
                 </div>
 
                 {/* Tray Running Total */}
-                <div className="p-3 border-t bg-background flex items-center justify-between">
+                <div className="p-2.5 border-t bg-background flex items-center justify-between shrink-0">
                   <span className="text-xs font-bold text-muted-foreground">
                     Tray Total:
                   </span>
-                  <span className="font-mono text-lg font-black text-foreground">
+                  <span className="font-mono text-base font-black text-foreground">
                     {formatCurrency(trayTotal)}
                   </span>
                 </div>
@@ -1043,27 +1090,45 @@ export default function RestaurantPage() {
             </div>
 
             {/* Bottom Form Actions */}
-            <div className="pt-2 border-t flex items-center justify-between gap-3">
+            <div className="pt-2.5 border-t bg-background flex items-center justify-between gap-2 shrink-0 mt-auto">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setOrderModalOpen(false)}
                 disabled={submittingOrder}
+                className="h-9 px-3 text-xs"
               >
                 Cancel
               </Button>
 
-              <Button
-                type="submit"
-                disabled={submittingOrder || (isAddingMore && Object.keys(selectedTray).length === 0)}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 gap-1.5"
-              >
-                {submittingOrder
-                  ? "Saving Order..."
-                  : isAddingMore
-                  ? `Add ${Object.keys(selectedTray).length} Item(s) to ${selectedTable?.name}`
-                  : `Confirm & Place Order (${formatCurrency(trayTotal)})`}
-              </Button>
+              <div className="flex items-center gap-2">
+                {mobileOrderPane === "menu" && Object.keys(selectedTray).length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setMobileOrderPane("tray")}
+                    className="lg:hidden h-9 px-2.5 text-xs gap-1 border-primary/40 text-primary font-semibold"
+                  >
+                    <Utensils className="w-3.5 h-3.5" />
+                    <span>View Tray ({Object.keys(selectedTray).length})</span>
+                  </Button>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={submittingOrder || (isAddingMore && Object.keys(selectedTray).length === 0)}
+                  className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-4 text-xs gap-1.5 shadow-sm"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>
+                    {submittingOrder
+                      ? "Saving..."
+                      : isAddingMore
+                      ? `Add to ${selectedTable?.name} (${formatCurrency(trayTotal)})`
+                      : `Place Order (${formatCurrency(trayTotal)})`}
+                  </span>
+                </Button>
+              </div>
             </div>
           </form>
         </DialogContent>
@@ -1071,12 +1136,12 @@ export default function RestaurantPage() {
 
       {/* LIVE TABLE BILL DETAILS MODAL */}
       <Dialog open={billModalOpen} onOpenChange={setBillModalOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] flex flex-col p-4 sm:p-6 overflow-x-hidden">
+        <DialogContent className="w-[96vw] max-w-xl max-h-[90dvh] flex flex-col p-3 sm:p-6 overflow-hidden">
           {activeBillTable && activeBillTable.activeOrder && (
-            <div className="flex flex-col flex-1 overflow-x-hidden space-y-4">
-              <DialogHeader>
+            <div className="flex flex-col flex-1 overflow-hidden space-y-3 min-h-0">
+              <DialogHeader className="shrink-0 pb-2 border-b">
                 <div className="flex items-center justify-between">
-                  <DialogTitle className="text-lg font-bold">
+                  <DialogTitle className="text-base sm:text-lg font-bold">
                     {activeBillTable.name} — Live Bill
                   </DialogTitle>
                   <span className="text-xs font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600">
@@ -1091,9 +1156,9 @@ export default function RestaurantPage() {
               </DialogHeader>
 
               {/* Items List Table */}
-              <div className="w-full overflow-x-auto border rounded-lg max-w-full">
+              <div className="w-full overflow-x-auto overflow-y-auto max-h-[44vh] border rounded-lg max-w-full flex-1 min-h-0">
                 <table className="w-full min-w-[460px] text-sm text-left">
-                  <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
+                  <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b sticky top-0 bg-background">
                     <tr>
                       <th className="px-3 py-2">Item</th>
                       <th className="px-3 py-2 text-center">Qty</th>
@@ -1126,16 +1191,16 @@ export default function RestaurantPage() {
               </div>
 
               {/* Total Card */}
-              <div className="p-3 bg-muted/30 border rounded-xl flex items-center justify-between">
-                <span className="font-bold text-sm">TOTAL AMOUNT DUE:</span>
-                <span className="font-mono text-xl font-black text-foreground">
+              <div className="p-2.5 sm:p-3 bg-muted/30 border rounded-xl flex items-center justify-between shrink-0">
+                <span className="font-bold text-xs sm:text-sm">TOTAL AMOUNT DUE:</span>
+                <span className="font-mono text-lg sm:text-xl font-black text-foreground">
                   {formatCurrency(activeBillTable.activeOrder.totalAmount)}
                 </span>
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-2 border-t flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
+              <div className="pt-2 border-t flex flex-wrap items-center justify-between gap-2 shrink-0">
+                <div className="flex items-center gap-1.5">
                   <Button
                     type="button"
                     variant="outline"
@@ -1147,7 +1212,7 @@ export default function RestaurantPage() {
                     className="h-8 text-xs gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>+ Add More Items</span>
+                    <span>+ Add Items</span>
                   </Button>
 
                   <Button
@@ -1158,11 +1223,11 @@ export default function RestaurantPage() {
                     className="h-8 text-xs gap-1 text-rose-600 border-rose-200 hover:bg-rose-50"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>Void Order</span>
+                    <span>Void</span>
                   </Button>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <Button
                     type="button"
                     variant="outline"
@@ -1171,7 +1236,7 @@ export default function RestaurantPage() {
                     className="h-8 text-xs gap-1"
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    <span>Print Bill</span>
+                    <span>Print</span>
                   </Button>
 
                   <Button
@@ -1184,7 +1249,7 @@ export default function RestaurantPage() {
                     className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1"
                   >
                     <DollarSign className="w-3.5 h-3.5" />
-                    <span>Settle Payment</span>
+                    <span>Settle Bill</span>
                   </Button>
                 </div>
               </div>
@@ -1195,7 +1260,7 @@ export default function RestaurantPage() {
 
       {/* SETTLEMENT MODAL */}
       <Dialog open={settleModalOpen} onOpenChange={setSettleModalOpen}>
-        <DialogContent className="max-w-md p-6">
+        <DialogContent className="w-[96vw] max-w-md p-4 sm:p-6 max-h-[90dvh] overflow-y-auto">
           <form onSubmit={handleConfirmSettle} className="space-y-4">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-lg font-bold">

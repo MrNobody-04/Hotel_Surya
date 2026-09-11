@@ -338,7 +338,7 @@ export default function CustomersPage() {
             <DialogHeader>
               <DialogTitle>Register New Customer</DialogTitle>
               <DialogDescription>
-                Add guest profile to Hotel Surya database. Citizenship photo is optional.
+                Add guest profile to NEW HOTEL SURYA database. Citizenship photo is optional.
               </DialogDescription>
             </DialogHeader>
 

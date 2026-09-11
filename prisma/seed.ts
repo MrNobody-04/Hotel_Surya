@@ -58,6 +58,7 @@ async function main() {
   // 3. Seed Service Catalog Items
   const catalog = [
     // Food
+    { name: "American Chopsy", category: "FOOD", defaultPrice: 300 },
     { name: "Steamed Veg Momo", category: "FOOD", defaultPrice: 180 },
     { name: "Chicken Steamed Momo", category: "FOOD", defaultPrice: 240 },
     { name: "Veg Chowmein", category: "FOOD", defaultPrice: 160 },
@@ -65,9 +66,19 @@ async function main() {
     { name: "Traditional Nepali Dal Bhat", category: "FOOD", defaultPrice: 350 },
     { name: "Chicken Fried Rice", category: "FOOD", defaultPrice: 220 },
     { name: "Aloo Sadeko & Peanuts", category: "FOOD", defaultPrice: 140 },
-    // Drinks
-    { name: "Mineral Water (1L)", category: "DRINK", defaultPrice: 35 },
-    { name: "Coca Cola (500ml)", category: "DRINK", defaultPrice: 100 },
+    // Soft Drinks & Energy Drinks
+    { name: "Coca Cola", category: "DRINK", defaultPrice: 70 },
+    { name: "Fanta", category: "DRINK", defaultPrice: 70 },
+    { name: "Sprite", category: "DRINK", defaultPrice: 70 },
+    { name: "Mineral Water", category: "DRINK", defaultPrice: 30 },
+    { name: "Redbull", category: "DRINK", defaultPrice: 150 },
+    { name: "Xtreme", category: "DRINK", defaultPrice: 200 },
+    { name: "Badam Juice", category: "DRINK", defaultPrice: 150 },
+    // Hard Drinks & Beer
+    { name: "Ruslan (180 ml)", category: "DRINK", defaultPrice: 650 },
+    { name: "Tuborg Strong (650 ml)", category: "DRINK", defaultPrice: 550 },
+    { name: "Gorkha Extra Strong (330 ml)", category: "DRINK", defaultPrice: 250 },
+    // Hot Beverages
     { name: "Nepal Special Masala Milk Tea", category: "DRINK", defaultPrice: 50 },
     { name: "Filter Coffee", category: "DRINK", defaultPrice: 90 },
     { name: "Fresh Orange Juice", category: "DRINK", defaultPrice: 160 },

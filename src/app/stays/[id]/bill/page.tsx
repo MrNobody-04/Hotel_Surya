@@ -387,10 +387,10 @@ export default function StayBillPage({
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
               <h2 className="text-2xl font-black tracking-tight text-foreground">
-                HOTEL SURYA
+                NEW HOTEL SURYA
               </h2>
               <p className="text-xs text-muted-foreground">
-                Pokhara, Nepal • Tel: +977 61-532100 • info@hotelsurya.com
+                Sainamaina-11, Saljhandi, Rupandehi, Nepal • NEW HOTEL SURYA
               </p>
               <div className="mt-2 inline-flex items-center gap-2">
                 <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary">
@@ -662,7 +662,7 @@ export default function StayBillPage({
               <div className="space-y-1 text-right">
                 <div className="w-48 border-b border-black"></div>
                 <div>Authorized Cashier / Stamp</div>
-                <div className="text-[10px] text-muted-foreground">Hotel Surya, Pokhara</div>
+                <div className="text-[10px] text-muted-foreground">NEW HOTEL SURYA</div>
               </div>
             </div>
           </div>
