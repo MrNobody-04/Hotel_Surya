@@ -78,12 +78,47 @@ export async function checkIn(input: CheckInInput) {
       customerId = customer.id;
     }
 
-    // 3. Create Stay record with automatic backend timestamp
+    // 3. Generate Stay ID with date prefix and 01-based sequence: MM-DD-01 (e.g. 09-11-01)
     const checkInAt = new Date();
     const expectedCheckoutDate = new Date(input.expectedCheckoutDate);
 
+    // Format Nepal date MM-DD
+    const nepalParts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kathmandu",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(checkInAt);
+
+    const month = nepalParts.find((p) => p.type === "month")?.value || String(checkInAt.getMonth() + 1).padStart(2, "0");
+    const day = nepalParts.find((p) => p.type === "day")?.value || String(checkInAt.getDate()).padStart(2, "0");
+    const prefix = `${month}-${day}-`;
+
+    // Find highest sequence today starting from 1
+    const existingStaysToday = await tx.stay.findMany({
+      where: {
+        id: { startsWith: prefix },
+      },
+      select: { id: true },
+    });
+
+    let nextSeq = 1;
+    const seqNumbers = existingStaysToday
+      .map((s) => parseInt(s.id.slice(prefix.length), 10))
+      .filter((n) => !isNaN(n) && n > 0);
+
+    if (seqNumbers.length > 0) {
+      nextSeq = Math.max(...seqNumbers) + 1;
+    }
+
+    let finalStayId = `${prefix}${String(nextSeq).padStart(2, "0")}`;
+    while (await tx.stay.findUnique({ where: { id: finalStayId } })) {
+      nextSeq++;
+      finalStayId = `${prefix}${String(nextSeq).padStart(2, "0")}`;
+    }
+
     const stay = await tx.stay.create({
       data: {
+        id: finalStayId,
         customerId,
         roomId: input.roomId,
         numberOfPeople: Math.max(1, Number(input.numberOfPeople) || 1),

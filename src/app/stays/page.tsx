@@ -188,8 +188,8 @@ export default function StaysHistoryPage() {
 
                     return (
                       <tr key={stay.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                          #{stay.id.slice(0, 8)}
+                        <td className="px-4 py-3 font-mono text-xs font-semibold text-foreground">
+                          #{stay.id.includes("-") ? stay.id : stay.id.slice(0, 8)}
                         </td>
                         <td className="px-4 py-3">
                           <span className="font-bold font-mono px-2 py-0.5 rounded bg-primary/10 text-primary">

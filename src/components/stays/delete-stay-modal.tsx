@@ -100,7 +100,7 @@ export function DeleteStayModal({
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Stay ID:</span>
             <span className="font-mono text-muted-foreground text-[11px]">
-              #{stay.id.slice(0, 8)}
+              #{stay.id.includes("-") ? stay.id : stay.id.slice(0, 8)}
             </span>
           </div>
           {isActive && (

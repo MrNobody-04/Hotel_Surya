@@ -313,7 +313,7 @@ export default function StayBillPage({
             </Button>
           </Link>
           <span className="text-muted-foreground">|</span>
-          <span className="text-sm font-semibold">Stay #{stay.id.slice(-6)}</span>
+          <span className="text-sm font-semibold">Stay #{stay.id.includes("-") ? stay.id : stay.id.slice(-6)}</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -394,7 +394,7 @@ export default function StayBillPage({
               </p>
               <div className="mt-2 inline-flex items-center gap-2">
                 <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary">
-                  Receipt #{stay.id.slice(0, 8).toUpperCase()}
+                  Receipt #{stay.id.includes("-") ? stay.id : stay.id.slice(0, 8).toUpperCase()}
                 </span>
                 <Badge variant={stay.status === "ACTIVE" ? "info" : "secondary"}>
                   {stay.status === "ACTIVE" ? "LIVE UNIFIED BILL" : "FINALIZED / CHECKED OUT"}

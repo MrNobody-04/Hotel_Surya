@@ -47,7 +47,7 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
           show: true,
         },
         {
-          label: "Rooms (7)",
+          label: "Rooms",
           href: "/rooms",
           icon: Bed,
           show: true,

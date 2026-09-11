@@ -14,6 +14,8 @@ import {
   Filter,
   UserPlus,
   ArrowUpRight,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -31,6 +33,14 @@ export default function RoomsPage() {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>("ALL");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Add Room Modal State
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [newRoomNumber, setNewRoomNumber] = useState("");
+  const [newType, setNewType] = useState<RoomType>("NON_AC");
+  const [newNotes, setNewNotes] = useState("");
+  const [creatingRoom, setCreatingRoom] = useState(false);
 
   // Edit Modal State
   const [editingRoom, setEditingRoom] = useState<RoomDTO | null>(null);
@@ -39,6 +49,11 @@ export default function RoomsPage() {
   const [editStatus, setEditStatus] = useState<RoomStatus>("AVAILABLE");
   const [editNotes, setEditNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Delete Room Modal State
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deletingRoom, setDeletingRoom] = useState<RoomDTO | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchRooms = async () => {
     try {
@@ -58,6 +73,12 @@ export default function RoomsPage() {
 
   useEffect(() => {
     fetchRooms();
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) setCurrentUser(data.user);
+      })
+      .catch((err) => console.error(err));
   }, []);
 
   const handleOpenEdit = (room: RoomDTO) => {
@@ -98,6 +119,69 @@ export default function RoomsPage() {
     }
   };
 
+  const handleCreateRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRoomNumber.trim()) {
+      toast.error("Please enter a room number");
+      return;
+    }
+
+    setCreatingRoom(true);
+    try {
+      const res = await fetch("/api/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomNumber: newRoomNumber.trim(),
+          type: newType,
+          notes: newNotes.trim() || null,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to add room");
+      }
+
+      toast.success(`Room ${newRoomNumber.trim()} added successfully`);
+      setAddModalOpen(false);
+      setNewRoomNumber("");
+      setNewType("NON_AC");
+      setNewNotes("");
+      fetchRooms();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setCreatingRoom(false);
+    }
+  };
+
+  const handleDeleteRoom = async () => {
+    if (!deletingRoom) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/rooms/${deletingRoom.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete room");
+      }
+
+      toast.success(`Room ${deletingRoom.roomNumber} deleted successfully`);
+      setConfirmDeleteOpen(false);
+      setEditingRoom(null);
+      setDeletingRoom(null);
+      fetchRooms();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const filteredRooms = rooms.filter((r) => {
     if (filterType !== "ALL" && r.type !== filterType) return false;
     if (filterStatus !== "ALL" && r.status !== filterStatus) return false;
@@ -126,16 +210,28 @@ export default function RoomsPage() {
             Room Management
           </h1>
           <p className="text-sm text-muted-foreground">
-            NEW HOTEL SURYA Inventory • 7 Rooms (2 AC, 5 Non-AC)
+            NEW HOTEL SURYA Inventory • {rooms.length} Rooms ({rooms.filter((r) => r.type === "AC").length} AC, {rooms.filter((r) => r.type === "NON_AC").length} Non-AC)
           </p>
         </div>
 
-        <Link href="/check-in">
-          <Button className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
-            <UserPlus className="w-4 h-4" />
-            <span>Check In Guest</span>
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          {(!currentUser || currentUser.role === "OWNER" || currentUser.role === "MANAGER") && (
+            <Button
+              onClick={() => setAddModalOpen(true)}
+              className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Add Room</span>
+            </Button>
+          )}
+
+          <Link href="/check-in">
+            <Button className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+              <UserPlus className="w-4 h-4" />
+              <span>Check In Guest</span>
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters Bar */}
@@ -404,16 +500,141 @@ export default function RoomsPage() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex flex-row items-center justify-between sm:justify-between w-full">
+            {currentUser?.role === "OWNER" && editingRoom?.status !== "OCCUPIED" ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDeletingRoom(editingRoom);
+                  setConfirmDeleteOpen(true);
+                }}
+                className="text-destructive hover:bg-destructive/10 border-destructive/30 text-xs h-9 gap-1"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Room</span>
+              </Button>
+            ) : (
+              <div />
+            )}
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditingRoom(null)}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEdit} disabled={submitting}>
+                {submitting ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add New Room Dialog (Owner & Manager) */}
+      <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={handleCreateRoom} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Bed className="w-5 h-5 text-primary" />
+                <span>Add New Room</span>
+              </DialogTitle>
+              <DialogDescription>
+                Register a new room in NEW HOTEL SURYA inventory. Room number must remain unique.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="newRoomNumber">Room Number *</Label>
+                <Input
+                  id="newRoomNumber"
+                  value={newRoomNumber}
+                  onChange={(e) => setNewRoomNumber(e.target.value)}
+                  placeholder="e.g. 108 or 201"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="newType">Room Type</Label>
+                <Select
+                  value={newType}
+                  onValueChange={(val: any) => setNewType(val)}
+                >
+                  <SelectTrigger id="newType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NON_AC">Non-AC (Standard)</SelectItem>
+                    <SelectItem value="AC">AC (Air Conditioned Deluxe)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="newNotes">Notes / Amenities (Optional)</Label>
+                <Input
+                  id="newNotes"
+                  value={newNotes}
+                  onChange={(e) => setNewNotes(e.target.value)}
+                  placeholder="e.g. 2nd floor, balcony view, double bed"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAddModalOpen(false)}
+                disabled={creatingRoom}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={creatingRoom} className="bg-primary">
+                {creatingRoom ? "Adding Room..." : "Add Room"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Delete Room Dialog */}
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              <span>Delete Room {deletingRoom?.roomNumber}</span>
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete Room {deletingRoom?.roomNumber} from inventory?
+              Rooms with existing stay history cannot be deleted.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2">
             <Button
+              type="button"
               variant="outline"
-              onClick={() => setEditingRoom(null)}
-              disabled={submitting}
+              onClick={() => setConfirmDeleteOpen(false)}
+              disabled={deleting}
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} disabled={submitting}>
-              {submitting ? "Saving..." : "Save Changes"}
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteRoom}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete Permanently"}
             </Button>
           </DialogFooter>
         </DialogContent>
