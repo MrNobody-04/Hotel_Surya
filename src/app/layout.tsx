@@ -22,16 +22,33 @@ export const metadata: Metadata = {
   description:
     "Production-grade internal operations and management platform for NEW HOTEL SURYA.",
   manifest: "/manifest.webmanifest",
+  applicationName: "NEW HOTEL SURYA",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "NEW HOTEL SURYA",
   },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
-    icon: "/favicon.png",
-    apple: "/icons/apple-touch-icon.png",
+    icon: [
+      { url: "/favicon.png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-title": "NEW HOTEL SURYA",
   },
 };
+
 
 export default async function RootLayout({
   children,

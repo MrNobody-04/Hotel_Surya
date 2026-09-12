@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Hotel, Lock, Mail, ArrowRight, ShieldCheck, Key, AlertCircle } from "lucide-react";
+import Image from "next/image";
+import { Lock, Mail, ArrowRight, ShieldCheck, Key, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,16 +56,25 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 bg-gradient-to-br from-slate-50 via-slate-100 to-blue-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <div className="w-full max-w-md space-y-6">
         {/* Brand Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex p-3 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-            <Hotel className="w-8 h-8" />
+        <div className="text-center space-y-3">
+          <div className="inline-flex rounded-2xl overflow-hidden shadow-xl shadow-amber-500/15 border border-amber-500/30 bg-slate-900 p-1">
+            <Image
+              src="/images/logo.png"
+              alt="NEW HOTEL SURYA"
+              width={76}
+              height={76}
+              className="rounded-xl object-cover"
+              priority
+            />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            NEW HOTEL SURYA
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Hotel Operations & Management Platform
-          </p>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              NEW HOTEL SURYA
+            </h1>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold mt-0.5">
+              Operations & Management Platform
+            </p>
+          </div>
         </div>
 
         {/* Login Form Card */}

@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -131,15 +132,21 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
   return (
     <aside className="w-64 border-r bg-card flex flex-col h-full shrink-0 select-none">
       {/* NEW HOTEL SURYA Brand Header */}
-      <div className="h-14 flex items-center gap-3 px-6 border-b">
-        <div className="p-1.5 rounded-lg bg-primary text-primary-foreground">
-          <Hotel className="w-5 h-5" />
+      <div className="h-16 flex items-center gap-3 px-5 border-b bg-card">
+        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md shrink-0 border border-amber-500/30 bg-slate-900 flex items-center justify-center">
+          <Image
+            src="/images/logo.png"
+            alt="NEW HOTEL SURYA"
+            width={40}
+            height={40}
+            className="object-cover"
+          />
         </div>
         <div>
-          <h1 className="font-bold text-sm tracking-tight text-foreground">
+          <h1 className="font-bold text-sm tracking-tight text-foreground leading-none">
             NEW HOTEL SURYA
           </h1>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mt-1">
             Operations Platform
           </p>
         </div>
