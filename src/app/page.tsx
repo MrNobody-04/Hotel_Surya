@@ -117,52 +117,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Action Buttons Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
-        <Link href="/restaurant">
-          <Button variant="outline" className="w-full justify-start gap-2 h-11 text-xs border-orange-500/30 hover:bg-orange-50 dark:hover:bg-orange-950/30">
-            <Utensils className="w-4 h-4 text-orange-600" />
-            <span>Cabins & Dining</span>
-          </Button>
-        </Link>
-        <Link href="/check-in">
-          <Button variant="outline" className="w-full justify-start gap-2 h-11 text-xs">
-            <UserPlus className="w-4 h-4 text-emerald-600" />
-            <span>Check In</span>
-          </Button>
-        </Link>
-        <Link href="/guests">
-          <Button variant="outline" className="w-full justify-start gap-2 h-11 text-xs">
-            <Bed className="w-4 h-4 text-purple-600" />
-            <span>Current Guests</span>
-          </Button>
-        </Link>
-        <Link href="/rooms">
-          <Button variant="outline" className="w-full justify-start gap-2 h-11 text-xs">
-            <CheckCircle2 className="w-4 h-4 text-cyan-600" />
-            <span>View 7 Rooms</span>
-          </Button>
-        </Link>
-        <Link href="/customers">
-          <Button variant="outline" className="w-full justify-start gap-2 h-11 text-xs">
-            <Users className="w-4 h-4 text-blue-600" />
-            <span>Customers</span>
-          </Button>
-        </Link>
-        <Link href="/expenses">
-          <Button variant="outline" className="w-full justify-start gap-2 h-11 text-xs">
-            <Receipt className="w-4 h-4 text-amber-600" />
-            <span>Add Expense</span>
-          </Button>
-        </Link>
-        <Link href="/analytics">
-          <Button variant="outline" className="w-full justify-start gap-2 h-11 text-xs">
-            <TrendingUp className="w-4 h-4 text-rose-600" />
-            <span>Analytics</span>
-          </Button>
-        </Link>
-      </div>
-
       {/* Primary KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Room Status KPI */}
