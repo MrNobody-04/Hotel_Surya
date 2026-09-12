@@ -16,6 +16,7 @@
 
 # Local Environment Variables & Secrets
 .env
+.env.postgres
 .env*.local
 .env.local
 .env.development.local

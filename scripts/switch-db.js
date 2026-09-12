@@ -10,19 +10,25 @@ const postgresSchema = path.join(root, "prisma", "schema.postgresql.prisma");
 const sqliteSchema = path.join(root, "prisma", "schema.sqlite.prisma");
 const envPath = path.join(root, ".env");
 
+const postgresEnvPath = path.join(root, ".env.postgres");
+
 if (mode === "postgres") {
   console.log("Switching to PostgreSQL database mode...");
   if (fs.existsSync(postgresSchema)) {
     fs.copyFileSync(postgresSchema, schemaPath);
   }
-  let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
-  if (!envContent.includes("DATABASE_URL")) {
-    envContent = `DATABASE_URL="postgresql://postgres:postgres@localhost:5432/hotelsurya?schema=public"\nAUTH_SECRET="surya-hotel-super-secret-jwt-key-minimum-32-chars-for-security"\n` + envContent;
-    fs.writeFileSync(envPath, envContent);
+  if (fs.existsSync(postgresEnvPath)) {
+    fs.copyFileSync(postgresEnvPath, envPath);
+  } else {
+    let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
+    if (!envContent.includes("DATABASE_URL") || envContent.includes("file:")) {
+      envContent = `DATABASE_URL="postgresql://postgres:postgres@localhost:5432/hotelsurya?schema=public"\nAUTH_SECRET="surya-hotel-super-secret-jwt-key-minimum-32-chars-for-security"\n` + envContent;
+      fs.writeFileSync(envPath, envContent);
+    }
   }
   console.log("Generating Prisma client for PostgreSQL...");
   execSync("npx prisma generate", { stdio: "inherit", cwd: root });
-  console.log("Done. Make sure your PostgreSQL server is running and run `npx prisma db push`.");
+  console.log("Done. PostgreSQL mode ready.");
 } else if (mode === "sqlite") {
   console.log("Switching to SQLite local zero-config mode...");
   // Backup postgres schema first if it exists
@@ -33,6 +39,10 @@ if (mode === "postgres") {
     fs.copyFileSync(sqliteSchema, schemaPath);
   }
   let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
+  // Backup postgres env
+  if (envContent.includes("postgresql://") || envContent.includes("postgres://")) {
+    fs.writeFileSync(postgresEnvPath, envContent);
+  }
   // Update or set DATABASE_URL
   if (envContent.includes("DATABASE_URL=")) {
     envContent = envContent.replace(/DATABASE_URL=.*/, 'DATABASE_URL="file:./dev.db"');

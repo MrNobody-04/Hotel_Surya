@@ -373,6 +373,32 @@ async function main() {
   }
   console.log("✅ Seeded Dining Tables (Cabins 1-3, Halls 1-3)");
 
+  // 10. Seed Default Payment QR (Nabil Bank)
+  if ((prisma as any).paymentQr) {
+    await (prisma as any).paymentQr.upsert({
+      where: { id: "default-nabil-qr" },
+      update: {
+        bankName: "Nabil Bank",
+        accountName: "SUJAN G.C.",
+        accountNumber: "27710017501941",
+        qrImageUrl: "/images/nabil-qr.jpg",
+        isDefault: true,
+        isActive: true,
+      },
+      create: {
+        id: "default-nabil-qr",
+        bankName: "Nabil Bank",
+        accountName: "SUJAN G.C.",
+        accountNumber: "27710017501941",
+        qrImageUrl: "/images/nabil-qr.jpg",
+        isDefault: true,
+        isActive: true,
+        notes: "Main Nabil Bank account",
+      },
+    });
+    console.log("✅ Seeded Default Payment QR (Nabil Bank)");
+  }
+
   console.log("✅ Seed completed successfully for Hotel Surya! 🎉");
 }
 
