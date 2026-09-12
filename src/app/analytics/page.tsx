@@ -91,6 +91,10 @@ export default function AnalyticsPage() {
     totalCollectedRevenue = 0,
     totalExpenses = 0,
     netOperationalResult = 0,
+    hotelRevenue = 0,
+    restaurantRevenue = 0,
+    diningOrdersCount = 0,
+    paymentsByMethod = {},
     roomUsageCount = {},
     topSellingItems = [],
   } = data || {};
@@ -128,7 +132,7 @@ export default function AnalyticsPage() {
             Financial & Operational Analytics
           </h1>
           <p className="text-sm text-muted-foreground">
-            Performance metrics, revenue sources, and room utilization for NEW HOTEL SURYA
+            Performance metrics, room bookings, and restaurant/cabin dining revenue for NEW HOTEL SURYA
           </p>
         </div>
 
@@ -150,6 +154,68 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* Revenue Stream Breakdown (Hotel Rooms vs Restaurant & Cabins) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="shadow-sm border-l-4 border-l-blue-500 bg-blue-50/20 dark:bg-blue-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs uppercase font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+              <Bed className="w-3.5 h-3.5" />
+              <span>🏨 Hotel Rooms Revenue</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black font-mono text-foreground">
+              {formatCurrency(hotelRevenue)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              From {data?.staysCount || 0} room check-in stays
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-l-4 border-l-purple-500 bg-purple-50/20 dark:bg-purple-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs uppercase font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
+              <Utensils className="w-3.5 h-3.5" />
+              <span>🍽️ Restaurant & Cabins Revenue</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black font-mono text-foreground">
+              {formatCurrency(restaurantRevenue)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              From {diningOrdersCount} completed dining orders
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-l-4 border-l-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs uppercase font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+              <DollarSign className="w-3.5 h-3.5" />
+              <span>💰 Total Combined Revenue</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+              {formatCurrency(totalCollectedRevenue)}
+            </div>
+            <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
+              <span>Cash: {formatCurrency(paymentsByMethod?.CASH || 0)}</span>
+              <span>•</span>
+              <span>QR: {formatCurrency((paymentsByMethod?.QR_PAYMENT || 0) + (paymentsByMethod?.QR_CODE || 0))}</span>
+              {(paymentsByMethod?.CARD || paymentsByMethod?.BANK_TRANSFER) ? (
+                <>
+                  <span>•</span>
+                  <span>Card/Bank: {formatCurrency((paymentsByMethod?.CARD || 0) + (paymentsByMethod?.BANK_TRANSFER || 0))}</span>
+                </>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="shadow-sm">
@@ -162,7 +228,7 @@ export default function AnalyticsPage() {
             <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
               {formatCurrency(totalCollectedRevenue)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">From guest stays & payments</p>
+            <p className="text-xs text-muted-foreground mt-1">Hotel stays + Cabins/Dining</p>
           </CardContent>
         </Card>
 

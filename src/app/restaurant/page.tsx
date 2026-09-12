@@ -136,6 +136,40 @@ export default function RestaurantPage() {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
+  // Add Table Modal State
+  const [addTableModalOpen, setAddTableModalOpen] = useState(false);
+  const [newTableName, setNewTableName] = useState("");
+  const [newTableType, setNewTableType] = useState<"CABIN" | "HALL">("CABIN");
+  const [newTableCapacity, setNewTableCapacity] = useState("4");
+  const [newTableNotes, setNewTableNotes] = useState("");
+  const [creatingTable, setCreatingTable] = useState(false);
+
+  // Delete Table Modal State
+  const [deleteTableModalOpen, setDeleteTableModalOpen] = useState(false);
+  const [tableToDelete, setTableToDelete] = useState<TableData | null>(null);
+  const [deletingTable, setDeletingTable] = useState(false);
+
+  // Edit Order History Modal State
+  const [editOrderModalOpen, setEditOrderModalOpen] = useState(false);
+  const [orderToEdit, setOrderToEdit] = useState<any | null>(null);
+  const [editCustomerName, setEditCustomerName] = useState("");
+  const [editCustomerPhone, setEditCustomerPhone] = useState("");
+  const [editGuestCount, setEditGuestCount] = useState("2");
+  const [editPaymentMethod, setEditPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [editPaidAmount, setEditPaidAmount] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editItems, setEditItems] = useState<OrderItem[]>([]);
+  const [editNewItemName, setEditNewItemName] = useState("");
+  const [editNewItemCategory, setEditNewItemCategory] = useState<BillItemCategory>("FOOD");
+  const [editNewItemPrice, setEditNewItemPrice] = useState("");
+  const [editNewItemQty, setEditNewItemQty] = useState("1");
+  const [savingEditOrder, setSavingEditOrder] = useState(false);
+
+  // Delete Order History Modal State
+  const [deleteOrderModalOpen, setDeleteOrderModalOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<any | null>(null);
+  const [deletingOrder, setDeletingOrder] = useState(false);
+
   const fetchTables = async () => {
     try {
       setLoading(true);
@@ -407,6 +441,202 @@ export default function RestaurantPage() {
     }
   };
 
+  // Create Table / Cabin Handler
+  const handleCreateTable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTableName.trim()) {
+      toast.error("Please enter a table or cabin name");
+      return;
+    }
+    setCreatingTable(true);
+    try {
+      const res = await fetch("/api/dining/tables", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "CREATE_TABLE",
+          name: newTableName.trim(),
+          type: newTableType,
+          capacity: Number(newTableCapacity) || 4,
+          notes: newTableNotes.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create table");
+
+      toast.success(`${newTableName.trim()} created successfully!`);
+      setAddTableModalOpen(false);
+      setNewTableName("");
+      setNewTableNotes("");
+      fetchTables();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setCreatingTable(false);
+    }
+  };
+
+  // Delete Table Handler
+  const handleDeleteTable = async () => {
+    if (!tableToDelete) return;
+    setDeletingTable(true);
+    try {
+      const res = await fetch(`/api/dining/tables/${tableToDelete.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to delete table");
+
+      toast.success(`${tableToDelete.name} deleted successfully!`);
+      setDeleteTableModalOpen(false);
+      setTableToDelete(null);
+      fetchTables();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setDeletingTable(false);
+    }
+  };
+
+  // Open Edit Order Modal
+  const handleOpenEditOrder = (order: any) => {
+    setOrderToEdit(order);
+    setEditCustomerName(order.customerName || "");
+    setEditCustomerPhone(order.customerPhone || "");
+    setEditGuestCount(String(order.guestCount || 1));
+    setEditPaymentMethod(order.paymentMethod || "CASH");
+    setEditPaidAmount(String(order.paidAmount || order.totalAmount || 0));
+    setEditNotes(order.notes || "");
+    setEditItems(
+      (order.items || []).map((it: any) => ({
+        id: it.id,
+        name: it.name,
+        category: it.category,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        total: it.total,
+        notes: it.notes,
+      }))
+    );
+    setEditNewItemName("");
+    setEditNewItemPrice("");
+    setEditNewItemQty("1");
+    setEditOrderModalOpen(true);
+  };
+
+  const editItemsTotal = useMemo(() => {
+    return editItems.reduce(
+      (sum, it) => sum + (Number(it.quantity) || 1) * (Number(it.unitPrice) || 0),
+      0
+    );
+  }, [editItems]);
+
+  const handleAddEditItem = () => {
+    if (!editNewItemName.trim()) {
+      toast.error("Please enter an item name");
+      return;
+    }
+    const q = Math.max(1, Number(editNewItemQty) || 1);
+    const p = Math.max(0, Number(editNewItemPrice) || 0);
+    setEditItems((prev) => [
+      ...prev,
+      {
+        name: editNewItemName.trim(),
+        category: editNewItemCategory,
+        quantity: q,
+        unitPrice: p,
+        total: q * p,
+      },
+    ]);
+    setEditNewItemName("");
+    setEditNewItemPrice("");
+    setEditNewItemQty("1");
+  };
+
+  const handleUpdateEditItem = (index: number, field: "quantity" | "unitPrice", val: number) => {
+    setEditItems((prev) => {
+      const updated = [...prev];
+      const item = { ...updated[index] };
+      if (field === "quantity") {
+        item.quantity = Math.max(1, val);
+      } else if (field === "unitPrice") {
+        item.unitPrice = Math.max(0, val);
+      }
+      item.total = item.quantity * item.unitPrice;
+      updated[index] = item;
+      return updated;
+    });
+  };
+
+  const handleRemoveEditItem = (index: number) => {
+    setEditItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Save Edit Order
+  const handleSaveEditOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orderToEdit) return;
+
+    setSavingEditOrder(true);
+    try {
+      const res = await fetch(`/api/dining/orders/${orderToEdit.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: editCustomerName.trim() || "Walk-in Customer",
+          customerPhone: editCustomerPhone.trim() || null,
+          guestCount: Number(editGuestCount) || 1,
+          paymentMethod: editPaymentMethod,
+          paidAmount: Number(editPaidAmount) || 0,
+          notes: editNotes.trim() || null,
+          items: editItems.map((it) => ({
+            name: it.name,
+            category: it.category,
+            quantity: Number(it.quantity) || 1,
+            unitPrice: Number(it.unitPrice) || 0,
+            notes: it.notes || null,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update order");
+
+      toast.success("Order updated successfully!");
+      setEditOrderModalOpen(false);
+      setOrderToEdit(null);
+      fetchHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSavingEditOrder(false);
+    }
+  };
+
+  // Delete Order from History
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    setDeletingOrder(true);
+    try {
+      const res = await fetch(`/api/dining/orders/${orderToDelete.id}?mode=delete`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to delete order");
+
+      toast.success("Order deleted from history");
+      setDeleteOrderModalOpen(false);
+      setOrderToDelete(null);
+      fetchHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setDeletingOrder(false);
+    }
+  };
+
   // Filtered menu list
   const filteredMenuItems = useMemo(() => {
     return menuItems.filter((it) => {
@@ -473,11 +703,26 @@ export default function RestaurantPage() {
             <span>Restaurant & Dining Orders</span>
           </h1>
           <p className="text-sm text-muted-foreground">
-            Manage walk-in customers and table orders for Cabins (1–3) and Halls (1–3)
+            Manage walk-in customers and table orders for Cabins and Halls
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            onClick={() => {
+              setNewTableName("");
+              setNewTableType("CABIN");
+              setNewTableCapacity("4");
+              setNewTableNotes("");
+              setAddTableModalOpen(true);
+            }}
+            className="h-9 gap-1.5 bg-primary font-bold shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Table / Cabin</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -522,7 +767,7 @@ export default function RestaurantPage() {
                 <Coffee className="w-4 h-4 text-purple-600" />
                 <span>Private Dining Cabins</span>
               </h2>
-              <span className="text-xs text-muted-foreground">3 Private Cabins</span>
+              <span className="text-xs text-muted-foreground">{cabins.length} Private Cabins</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -547,9 +792,26 @@ export default function RestaurantPage() {
                             CABIN
                           </Badge>
                         </div>
-                        <Badge variant={isOccupied ? "warning" : "success"}>
-                          {isOccupied ? "OCCUPIED" : "AVAILABLE"}
-                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant={isOccupied ? "warning" : "success"}>
+                            {isOccupied ? "OCCUPIED" : "AVAILABLE"}
+                          </Badge>
+                          {!isOccupied && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTableToDelete(table);
+                                setDeleteTableModalOpen(true);
+                              }}
+                              className="h-6 w-6 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                              title={`Delete ${table.name}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
 
                       {isOccupied ? (
@@ -643,7 +905,7 @@ export default function RestaurantPage() {
                 <Users className="w-4 h-4 text-blue-600" />
                 <span>Main Dining Halls</span>
               </h2>
-              <span className="text-xs text-muted-foreground">3 Dining Halls</span>
+              <span className="text-xs text-muted-foreground">{halls.length} Dining Halls</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -668,9 +930,26 @@ export default function RestaurantPage() {
                             HALL
                           </Badge>
                         </div>
-                        <Badge variant={isOccupied ? "warning" : "success"}>
-                          {isOccupied ? "OCCUPIED" : "AVAILABLE"}
-                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant={isOccupied ? "warning" : "success"}>
+                            {isOccupied ? "OCCUPIED" : "AVAILABLE"}
+                          </Badge>
+                          {!isOccupied && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTableToDelete(table);
+                                setDeleteTableModalOpen(true);
+                              }}
+                              className="h-6 w-6 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                              title={`Delete ${table.name}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
 
                       {isOccupied ? (
@@ -783,7 +1062,7 @@ export default function RestaurantPage() {
                 </div>
               ) : (
                 <div className="w-full overflow-x-auto max-w-full">
-                  <table className="w-full min-w-[550px] text-sm text-left">
+                  <table className="w-full min-w-[620px] text-sm text-left">
                     <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
                       <tr>
                         <th className="px-4 py-3">Order ID</th>
@@ -793,6 +1072,7 @@ export default function RestaurantPage() {
                         <th className="px-4 py-3">Settled At</th>
                         <th className="px-4 py-3">Payment</th>
                         <th className="px-4 py-3 text-right">Total Paid</th>
+                        <th className="px-4 py-3 text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border text-xs">
@@ -824,6 +1104,32 @@ export default function RestaurantPage() {
                           </td>
                           <td className="px-4 py-3 text-right font-mono font-bold text-emerald-600">
                             {formatCurrency(ord.paidAmount || ord.totalAmount)}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenEditOrder(ord)}
+                                className="h-7 px-2 text-xs gap-1 hover:border-primary/60 hover:text-primary"
+                                title="Edit Order Details"
+                              >
+                                <Pencil className="w-3 h-3" />
+                                <span className="hidden sm:inline">Edit</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setOrderToDelete(ord);
+                                  setDeleteOrderModalOpen(true);
+                                }}
+                                className="h-7 w-7 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                                title="Delete Order from History"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1613,6 +1919,423 @@ export default function RestaurantPage() {
               className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
             >
               {cancelling ? "Voiding..." : "Confirm Void Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ADD TABLE / CABIN MODAL */}
+      <Dialog open={addTableModalOpen} onOpenChange={setAddTableModalOpen}>
+        <DialogContent className="max-w-md p-6">
+          <form onSubmit={handleCreateTable} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                <Utensils className="w-5 h-5 text-primary" />
+                <span>Add Table or Cabin</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Create a new dining area for guests to sit, eat, and place orders.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <Label htmlFor="tName">Area Name *</Label>
+                <Input
+                  id="tName"
+                  placeholder="e.g. Cabin 4, Hall 4, Rooftop 1"
+                  value={newTableName}
+                  onChange={(e) => setNewTableName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="tType">Area Type *</Label>
+                  <Select
+                    value={newTableType}
+                    onValueChange={(v: any) => setNewTableType(v)}
+                  >
+                    <SelectTrigger id="tType">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CABIN">Private Cabin</SelectItem>
+                      <SelectItem value="HALL">Dining Hall</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="tCap">Seating Capacity</Label>
+                  <Input
+                    id="tCap"
+                    type="number"
+                    min="1"
+                    value={newTableCapacity}
+                    onChange={(e) => setNewTableCapacity(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="tNotes">Notes / Description (Optional)</Label>
+                <Input
+                  id="tNotes"
+                  placeholder="e.g. Near balcony, AC equipped"
+                  value={newTableNotes}
+                  onChange={(e) => setNewTableNotes(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAddTableModalOpen(false)}
+                disabled={creatingTable}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={creatingTable}
+                className="bg-primary font-bold text-white"
+              >
+                {creatingTable ? "Creating..." : "Create Table"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* DELETE TABLE CONFIRMATION MODAL */}
+      <Dialog open={deleteTableModalOpen} onOpenChange={setDeleteTableModalOpen}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader className="space-y-2 text-left">
+            <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <DialogTitle className="text-lg font-bold">
+              Delete {tableToDelete?.name}?
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Are you sure you want to delete <strong>{tableToDelete?.name}</strong>? This dining area is currently vacant and will be removed from the system.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-3 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteTableModalOpen(false)}
+              disabled={deletingTable}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleDeleteTable}
+              disabled={deletingTable}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+            >
+              {deletingTable ? "Deleting..." : "Confirm Delete Table"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* EDIT COMPLETED ORDER MODAL */}
+      <Dialog open={editOrderModalOpen} onOpenChange={setEditOrderModalOpen}>
+        <DialogContent className="w-[98vw] max-w-3xl max-h-[92dvh] flex flex-col p-4 sm:p-6 overflow-hidden">
+          <form onSubmit={handleSaveEditOrder} className="flex flex-col flex-1 h-full min-h-0 overflow-hidden">
+            <DialogHeader className="shrink-0 pb-3 border-b">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="flex items-center gap-2 text-base font-bold">
+                  <Pencil className="w-4 h-4 text-primary" />
+                  <span>Edit Completed Order #{orderToEdit?.id.slice(0, 8)}</span>
+                </DialogTitle>
+                <Badge variant="secondary" className="font-mono text-xs">
+                  {orderToEdit?.table?.name}
+                </Badge>
+              </div>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Modify customer details, items, or payment info for this past dining order.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto py-4 space-y-4 text-xs pr-1">
+              {/* Customer & Order Metadata */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-muted/30 rounded-xl border">
+                <div className="space-y-1">
+                  <Label htmlFor="edCustName">Customer Name</Label>
+                  <Input
+                    id="edCustName"
+                    value={editCustomerName}
+                    onChange={(e) => setEditCustomerName(e.target.value)}
+                    placeholder="Walk-in Customer"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edCustPhone">Phone Number</Label>
+                  <Input
+                    id="edCustPhone"
+                    value={editCustomerPhone}
+                    onChange={(e) => setEditCustomerPhone(e.target.value)}
+                    placeholder="e.g. 98XXXXXXXX"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edGuestCount">Guest Count</Label>
+                  <Input
+                    id="edGuestCount"
+                    type="number"
+                    min="1"
+                    value={editGuestCount}
+                    onChange={(e) => setEditGuestCount(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Items List */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="font-bold text-sm">Ordered Items ({editItems.length})</Label>
+                  <span className="text-xs font-mono font-bold text-foreground">
+                    Items Sum: {formatCurrency(editItemsTotal)}
+                  </span>
+                </div>
+
+                <div className="border rounded-xl overflow-hidden divide-y divide-border bg-background">
+                  {editItems.map((item, idx) => (
+                    <div key={idx} className="p-2.5 flex items-center justify-between gap-2 text-xs">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold truncate">{item.name}</div>
+                        <Badge variant="outline" className="text-[10px] mt-0.5">
+                          {item.category}
+                        </Badge>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground text-[10px]">Qty:</span>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) =>
+                              handleUpdateEditItem(idx, "quantity", Number(e.target.value))
+                            }
+                            className="w-16 h-7 text-xs font-mono text-center"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground text-[10px]">Price:</span>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={item.unitPrice}
+                            onChange={(e) =>
+                              handleUpdateEditItem(idx, "unitPrice", Number(e.target.value))
+                            }
+                            className="w-20 h-7 text-xs font-mono text-right"
+                          />
+                        </div>
+
+                        <span className="font-mono font-bold w-16 text-right text-emerald-600">
+                          {formatCurrency(item.quantity * item.unitPrice)}
+                        </span>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveEditItem(idx)}
+                          className="h-7 w-7 text-muted-foreground hover:text-rose-600 hover:bg-rose-50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {editItems.length === 0 && (
+                    <div className="p-4 text-center text-muted-foreground text-xs">
+                      No items currently in this order. Add an item below.
+                    </div>
+                  )}
+                </div>
+
+                {/* Add Item Row in Edit Modal */}
+                <div className="p-3 bg-muted/20 border rounded-xl space-y-2">
+                  <div className="text-[11px] font-semibold text-muted-foreground">
+                    + Add Additional Item to Order
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                    <div className="sm:col-span-2">
+                      <Input
+                        placeholder="Item name (e.g. Steam Momo)"
+                        value={editNewItemName}
+                        onChange={(e) => setEditNewItemName(e.target.value)}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <Select
+                        value={editNewItemCategory}
+                        onValueChange={(v: any) => setEditNewItemCategory(v)}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FOOD">Food</SelectItem>
+                          <SelectItem value="DRINK">Drink</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="Price (Rs)"
+                        value={editNewItemPrice}
+                        onChange={(e) => setEditNewItemPrice(e.target.value)}
+                        className="h-8 text-xs font-mono"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="Qty"
+                        value={editNewItemQty}
+                        onChange={(e) => setEditNewItemQty(e.target.value)}
+                        className="h-8 text-xs font-mono w-14"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleAddEditItem}
+                        className="h-8 flex-1 text-xs"
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment & Settlement Details */}
+              <div className="p-3 bg-background border rounded-xl space-y-3">
+                <div className="text-xs font-bold text-foreground">Settlement & Payment Details</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="edPayMeth">Payment Method</Label>
+                    <Select
+                      value={editPaymentMethod}
+                      onValueChange={(v: any) => setEditPaymentMethod(v)}
+                    >
+                      <SelectTrigger id="edPayMeth" className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CASH">Cash Payment</SelectItem>
+                        <SelectItem value="QR_PAYMENT">Nabil Bank / QR Payment</SelectItem>
+                        <SelectItem value="BANK_TRANSFER">Bank Transfer / ConnectIPS</SelectItem>
+                        <SelectItem value="CARD">Debit / Credit Card</SelectItem>
+                        <SelectItem value="OTHER">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="edPaidAmt">Total Paid (NPR)</Label>
+                      <button
+                        type="button"
+                        onClick={() => setEditPaidAmount(String(editItemsTotal))}
+                        className="text-[10px] text-primary hover:underline font-semibold"
+                      >
+                        Sync with Items Total
+                      </button>
+                    </div>
+                    <Input
+                      id="edPaidAmt"
+                      type="number"
+                      value={editPaidAmount}
+                      onChange={(e) => setEditPaidAmount(e.target.value)}
+                      className="font-mono font-bold text-emerald-600"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="edNotes">Order Notes</Label>
+                  <Input
+                    id="edNotes"
+                    placeholder="Optional notes or references"
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="shrink-0 pt-3 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditOrderModalOpen(false)}
+                disabled={savingEditOrder}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={savingEditOrder}
+                className="bg-primary font-bold text-white"
+              >
+                {savingEditOrder ? "Saving Changes..." : "Save Order Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* DELETE ORDER HISTORY MODAL */}
+      <Dialog open={deleteOrderModalOpen} onOpenChange={setDeleteOrderModalOpen}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader className="space-y-2 text-left">
+            <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <DialogTitle className="text-lg font-bold">
+              Delete Order #{orderToDelete?.id.slice(0, 8)}?
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Are you sure you want to permanently delete this order for <strong>{orderToDelete?.customerName}</strong> ({orderToDelete?.table?.name})? This will permanently remove this record and update financial analytics.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-3 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteOrderModalOpen(false)}
+              disabled={deletingOrder}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleDeleteOrder}
+              disabled={deletingOrder}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+            >
+              {deletingOrder ? "Deleting..." : "Confirm Delete Order"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/server/auth/rbac";
-import { getDiningTables, startDiningOrder } from "@/server/services/dining.service";
+import { requireAuth, requireRole } from "@/server/auth/rbac";
+import {
+  getDiningTables,
+  startDiningOrder,
+  createDiningTable,
+} from "@/server/services/dining.service";
 
 export async function GET() {
   try {
@@ -17,9 +21,25 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireAuth();
     const body = await request.json();
 
+    // Check if this is a request to create a new table/cabin
+    if (body.action === "CREATE_TABLE" || (!body.tableId && body.name)) {
+      const user = await requireRole(["OWNER", "MANAGER"]);
+      const newTable = await createDiningTable(
+        {
+          name: body.name,
+          type: body.type,
+          capacity: body.capacity,
+          notes: body.notes,
+        },
+        user.id,
+        user.name
+      );
+      return NextResponse.json({ table: newTable }, { status: 201 });
+    }
+
+    const user = await requireAuth();
     const { tableId, customerName, customerPhone, guestCount, notes, items } = body;
     if (!tableId) {
       return NextResponse.json({ error: "Table ID is required" }, { status: 400 });
@@ -39,8 +59,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ order }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || "Failed to start dining order" },
-      { status: 400 }
+      { error: error.message || "Failed to process dining request" },
+      { status: error.statusCode || 400 }
     );
   }
 }

@@ -445,3 +445,260 @@ export async function getDiningOrderHistory(limit = 50, skip = 0) {
 
   return { orders, total };
 }
+
+export async function createDiningTable(
+  data: {
+    name: string;
+    type?: "CABIN" | "HALL";
+    capacity?: number;
+    notes?: string | null;
+  },
+  userId: string,
+  userName: string
+) {
+  const trimmedName = data.name.trim();
+  if (!trimmedName) {
+    throw new Error("Table/Cabin name is required");
+  }
+
+  const existing = await prisma.diningTable.findUnique({
+    where: { name: trimmedName },
+  });
+  if (existing) {
+    throw new Error(`A table or cabin named "${trimmedName}" already exists`);
+  }
+
+  const table = await prisma.diningTable.create({
+    data: {
+      name: trimmedName,
+      type: data.type || "CABIN",
+      capacity: Math.max(1, Number(data.capacity) || 4),
+      status: "AVAILABLE",
+      notes: data.notes?.trim() || null,
+    },
+  });
+
+  await logAuditEvent({
+    userId,
+    userName,
+    action: "DINING_TABLE_CREATED",
+    entity: "DiningTable",
+    entityId: table.id,
+    metadata: {
+      tableName: table.name,
+      type: table.type,
+      capacity: table.capacity,
+    },
+  });
+
+  return table;
+}
+
+export async function deleteDiningTable(
+  tableId: string,
+  userId: string,
+  userName: string
+) {
+  return await prisma.$transaction(async (tx) => {
+    const table = await tx.diningTable.findUnique({
+      where: { id: tableId },
+      include: {
+        orders: {
+          include: { items: true },
+        },
+      },
+    });
+
+    if (!table) {
+      throw new Error("Dining table not found");
+    }
+
+    const hasActiveOrder = table.orders.some((o) => o.status === "ACTIVE");
+    if (hasActiveOrder) {
+      throw new Error(
+        `Cannot remove ${table.name} because it currently has an active seated order. Please settle or void the order first.`
+      );
+    }
+
+    // Delete all associated orders and order items to satisfy foreign key constraints
+    for (const order of table.orders) {
+      await tx.diningOrderItem.deleteMany({
+        where: { orderId: order.id },
+      });
+    }
+    await tx.diningOrder.deleteMany({
+      where: { tableId },
+    });
+
+    // Delete table
+    await tx.diningTable.delete({
+      where: { id: tableId },
+    });
+
+    await logAuditEvent({
+      userId,
+      userName,
+      action: "DINING_TABLE_DELETED",
+      entity: "DiningTable",
+      entityId: tableId,
+      metadata: {
+        tableName: table.name,
+        type: table.type,
+        deletedOrdersCount: table.orders.length,
+      },
+    });
+
+    return { success: true, tableName: table.name };
+  });
+}
+
+export async function updateDiningTable(
+  tableId: string,
+  data: {
+    name?: string;
+    type?: "CABIN" | "HALL";
+    capacity?: number;
+    notes?: string | null;
+  },
+  userId: string,
+  userName: string
+) {
+  const table = await prisma.diningTable.findUnique({
+    where: { id: tableId },
+  });
+
+  if (!table) {
+    throw new Error("Dining table not found");
+  }
+
+  if (data.name && data.name.trim() !== table.name) {
+    const existing = await prisma.diningTable.findUnique({
+      where: { name: data.name.trim() },
+    });
+    if (existing) {
+      throw new Error(`A table or cabin named "${data.name.trim()}" already exists`);
+    }
+  }
+
+  const updated = await prisma.diningTable.update({
+    where: { id: tableId },
+    data: {
+      ...(data.name ? { name: data.name.trim() } : {}),
+      ...(data.type ? { type: data.type } : {}),
+      ...(data.capacity !== undefined ? { capacity: Math.max(1, Number(data.capacity) || 1) } : {}),
+      ...(data.notes !== undefined ? { notes: data.notes?.trim() || null } : {}),
+    },
+  });
+
+  await logAuditEvent({
+    userId,
+    userName,
+    action: "DINING_TABLE_UPDATED",
+    entity: "DiningTable",
+    entityId: tableId,
+    metadata: {
+      oldName: table.name,
+      newName: updated.name,
+      type: updated.type,
+    },
+  });
+
+  return updated;
+}
+
+export async function updateDiningOrder(
+  orderId: string,
+  data: {
+    customerName?: string | null;
+    customerPhone?: string | null;
+    guestCount?: number;
+    paymentMethod?: PaymentMethod | null;
+    paidAmount?: number;
+    notes?: string | null;
+    items?: Array<{
+      id?: string;
+      name: string;
+      category?: BillItemCategory;
+      quantity: number;
+      unitPrice: number;
+      notes?: string | null;
+    }>;
+  },
+  userId: string,
+  userName: string
+) {
+  return await prisma.$transaction(async (tx) => {
+    const order = await tx.diningOrder.findUnique({
+      where: { id: orderId },
+      include: { table: true, items: true },
+    });
+
+    if (!order) {
+      throw new Error("Dining order not found");
+    }
+
+    let calculatedTotal = order.totalAmount;
+
+    // If items are provided for updating
+    if (data.items && Array.isArray(data.items)) {
+      await tx.diningOrderItem.deleteMany({ where: { orderId } });
+
+      let newTotal = 0;
+      for (const item of data.items) {
+        const q = Math.max(1, Number(item.quantity) || 1);
+        const p = Math.max(0, Number(item.unitPrice) || 0);
+        const itemTotal = q * p;
+        newTotal += itemTotal;
+
+        await tx.diningOrderItem.create({
+          data: {
+            orderId,
+            category: (item.category || "FOOD") as any,
+            name: item.name.trim(),
+            quantity: q,
+            unitPrice: p,
+            total: itemTotal,
+            notes: item.notes?.trim() || null,
+          },
+        });
+      }
+      calculatedTotal = newTotal;
+    }
+
+    const updated = await tx.diningOrder.update({
+      where: { id: orderId },
+      data: {
+        ...(data.customerName !== undefined ? { customerName: data.customerName?.trim() || "Walk-in Customer" } : {}),
+        ...(data.customerPhone !== undefined ? { customerPhone: data.customerPhone?.trim() || null } : {}),
+        ...(data.guestCount !== undefined ? { guestCount: Math.max(1, Number(data.guestCount) || 1) } : {}),
+        ...(data.paymentMethod !== undefined ? { paymentMethod: data.paymentMethod } : {}),
+        ...(data.paidAmount !== undefined
+          ? { paidAmount: Number(data.paidAmount) }
+          : data.items
+          ? { paidAmount: calculatedTotal }
+          : {}),
+        ...(data.items ? { totalAmount: calculatedTotal } : {}),
+        ...(data.notes !== undefined ? { notes: data.notes?.trim() || null } : {}),
+      },
+      include: { table: true, items: true },
+    });
+
+    await logAuditEvent({
+      userId,
+      userName,
+      action: "DINING_ORDER_UPDATED",
+      entity: "DiningOrder",
+      entityId: orderId,
+      metadata: {
+        tableName: order.table.name,
+        customerName: updated.customerName,
+        totalAmount: updated.totalAmount,
+        paidAmount: updated.paidAmount,
+        paymentMethod: updated.paymentMethod,
+      },
+    });
+
+    return updated;
+  });
+}
+

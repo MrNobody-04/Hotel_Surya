@@ -23,6 +23,9 @@ export async function getDashboardMetrics() {
     todayPayments,
     weekPayments,
     monthPayments,
+    todayDining,
+    weekDining,
+    monthDining,
     todayExp,
     monthExp,
   ] = await Promise.all([
@@ -58,6 +61,36 @@ export async function getDashboardMetrics() {
     prisma.payment.aggregate({
       where: { timestamp: { gte: startOfMonth } },
       _sum: { amount: true },
+    }),
+    prisma.diningOrder.aggregate({
+      where: {
+        status: "COMPLETED",
+        OR: [
+          { settledAt: { gte: startOfToday, lte: endOfToday } },
+          { settledAt: null, createdAt: { gte: startOfToday, lte: endOfToday } },
+        ],
+      },
+      _sum: { paidAmount: true },
+    }),
+    prisma.diningOrder.aggregate({
+      where: {
+        status: "COMPLETED",
+        OR: [
+          { settledAt: { gte: startOfWeek } },
+          { settledAt: null, createdAt: { gte: startOfWeek } },
+        ],
+      },
+      _sum: { paidAmount: true },
+    }),
+    prisma.diningOrder.aggregate({
+      where: {
+        status: "COMPLETED",
+        OR: [
+          { settledAt: { gte: startOfMonth } },
+          { settledAt: null, createdAt: { gte: startOfMonth } },
+        ],
+      },
+      _sum: { paidAmount: true },
     }),
     prisma.expense.aggregate({
       where: { date: { gte: startOfToday, lte: endOfToday } },
@@ -107,10 +140,18 @@ export async function getDashboardMetrics() {
     };
   });
 
-  // 4. Financial: Revenue (from actual recorded payments)
-  const todayRevenue = todayPayments._sum.amount || 0;
-  const weeklyRevenue = weekPayments._sum.amount || 0;
-  const monthlyRevenue = monthPayments._sum.amount || 0;
+  // 4. Financial: Revenue (Hotel Room stays + Restaurant & Cabin Orders)
+  const todayHotelRevenue = todayPayments._sum.amount || 0;
+  const todayRestaurantRevenue = todayDining._sum.paidAmount || 0;
+  const todayRevenue = todayHotelRevenue + todayRestaurantRevenue;
+
+  const weeklyHotelRevenue = weekPayments._sum.amount || 0;
+  const weeklyRestaurantRevenue = weekDining._sum.paidAmount || 0;
+  const weeklyRevenue = weeklyHotelRevenue + weeklyRestaurantRevenue;
+
+  const monthlyHotelRevenue = monthPayments._sum.amount || 0;
+  const monthlyRestaurantRevenue = monthDining._sum.paidAmount || 0;
+  const monthlyRevenue = monthlyHotelRevenue + monthlyRestaurantRevenue;
 
   // 5. Financial: Expenses
   const todayExpenses = todayExp._sum.amount || 0;
@@ -142,6 +183,12 @@ export async function getDashboardMetrics() {
       todayRevenue,
       weeklyRevenue,
       monthlyRevenue,
+      todayHotelRevenue,
+      todayRestaurantRevenue,
+      weeklyHotelRevenue,
+      weeklyRestaurantRevenue,
+      monthlyHotelRevenue,
+      monthlyRestaurantRevenue,
       todayExpenses,
       monthlyExpenses,
       monthlyNetIncome,
@@ -156,9 +203,28 @@ export async function getDetailedAnalytics(startDate?: Date, endDate?: Date) {
   if (startDate) whereDate.gte = startDate;
   if (endDate) whereDate.lte = endDate;
 
-  // 1. All bill items in period to analyze category revenue breakdown
+  // 1. Bill items from hotel stays in period
   const billItems = await prisma.billItem.findMany({
     where: startDate || endDate ? { createdAt: whereDate } : undefined,
+  });
+
+  // 2. Completed dining orders (Cabins & Halls) in period
+  const diningOrders = await prisma.diningOrder.findMany({
+    where: {
+      status: "COMPLETED",
+      ...(startDate || endDate
+        ? {
+            OR: [
+              { settledAt: whereDate },
+              { settledAt: null, createdAt: whereDate },
+            ],
+          }
+        : {}),
+    },
+    include: {
+      items: true,
+      table: true,
+    },
   });
 
   const categoryTotals: Record<string, number> = {
@@ -169,6 +235,7 @@ export async function getDetailedAnalytics(startDate?: Date, endDate?: Date) {
     OTHER: 0,
   };
 
+  // Add bill items from room stays
   for (const item of billItems) {
     categoryTotals[item.category] = (categoryTotals[item.category] || 0) + item.total;
   }
@@ -183,7 +250,15 @@ export async function getDetailedAnalytics(startDate?: Date, endDate?: Date) {
     categoryTotals.ROOM = (categoryTotals.ROOM || 0) + stay.roomPrice;
   }
 
-  // 2. Expenses in period grouped by category
+  // Include food & drink items from completed restaurant / cabin orders
+  for (const order of diningOrders) {
+    for (const item of order.items) {
+      const cat = item.category || "FOOD";
+      categoryTotals[cat] = (categoryTotals[cat] || 0) + item.total;
+    }
+  }
+
+  // 3. Expenses in period grouped by category
   const expenses = await prisma.expense.findMany({
     where: startDate || endDate ? { date: whereDate } : undefined,
   });
@@ -195,26 +270,37 @@ export async function getDetailedAnalytics(startDate?: Date, endDate?: Date) {
     totalExpenses += exp.amount;
   }
 
-  // 3. Payments in period
-  const payments = await prisma.payment.findMany({
+  // 4. Payments from Hotel Stays
+  const hotelPayments = await prisma.payment.findMany({
     where: startDate || endDate ? { timestamp: whereDate } : undefined,
   });
 
   const paymentsByMethod: Record<string, number> = {};
-  let totalRevenue = 0;
-  for (const p of payments) {
+  let hotelRevenue = 0;
+  for (const p of hotelPayments) {
     paymentsByMethod[p.method] = (paymentsByMethod[p.method] || 0) + p.amount;
-    totalRevenue += p.amount;
+    hotelRevenue += p.amount;
   }
 
-  // 4. Room utilization
+  // 5. Payments from Restaurant & Cabins
+  let restaurantRevenue = 0;
+  for (const ord of diningOrders) {
+    const method = ord.paymentMethod || "CASH";
+    const amount = ord.paidAmount > 0 ? ord.paidAmount : ord.totalAmount;
+    paymentsByMethod[method] = (paymentsByMethod[method] || 0) + amount;
+    restaurantRevenue += amount;
+  }
+
+  const totalCollectedRevenue = hotelRevenue + restaurantRevenue;
+
+  // 6. Room utilization
   const roomUsageCount: Record<string, number> = {};
   for (const stay of stays) {
     const num = stay.room.roomNumber;
     roomUsageCount[num] = (roomUsageCount[num] || 0) + 1;
   }
 
-  // 5. Top selling items (Food & Drink)
+  // 7. Top selling items (Food & Drink from stays + dining orders)
   const itemCounts: Record<string, { name: string; category: string; count: number; revenue: number }> = {};
   for (const item of billItems) {
     if (item.category === "FOOD" || item.category === "DRINK") {
@@ -226,6 +312,18 @@ export async function getDetailedAnalytics(startDate?: Date, endDate?: Date) {
     }
   }
 
+  for (const ord of diningOrders) {
+    for (const item of ord.items) {
+      if (item.category === "FOOD" || item.category === "DRINK") {
+        if (!itemCounts[item.name]) {
+          itemCounts[item.name] = { name: item.name, category: item.category, count: 0, revenue: 0 };
+        }
+        itemCounts[item.name].count += item.quantity;
+        itemCounts[item.name].revenue += item.total;
+      }
+    }
+  }
+
   const topSellingItems = Object.values(itemCounts)
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
@@ -233,13 +331,16 @@ export async function getDetailedAnalytics(startDate?: Date, endDate?: Date) {
   return {
     revenueByCategory: categoryTotals,
     totalBilledRevenue: Object.values(categoryTotals).reduce((a, b) => a + b, 0),
-    totalCollectedRevenue: totalRevenue,
+    totalCollectedRevenue,
+    hotelRevenue,
+    restaurantRevenue,
     paymentsByMethod,
     expensesByCategory,
     totalExpenses,
-    netOperationalResult: totalRevenue - totalExpenses,
+    netOperationalResult: totalCollectedRevenue - totalExpenses,
     roomUsageCount,
     topSellingItems,
     staysCount: stays.length,
+    diningOrdersCount: diningOrders.length,
   };
 }
