@@ -730,7 +730,7 @@ export default function RestaurantPage() {
             className="h-9 gap-1.5 border-emerald-600/30 text-emerald-700 dark:text-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 dark:bg-emerald-950/30"
           >
             <QrCode className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Nabil QR</span>
+            <span>Payment QR</span>
           </Button>
 
           <Button
@@ -1840,17 +1840,15 @@ export default function RestaurantPage() {
               {settleMethod === "QR_PAYMENT" && (
                 <div className="p-3 bg-background border-2 border-emerald-500/40 rounded-xl flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <img
-                      src="/images/nabil-qr.jpg"
-                      alt="Nabil QR"
-                      className="w-14 h-14 object-contain rounded border"
-                    />
+                    <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 rounded-lg flex items-center justify-center shrink-0">
+                      <QrCode className="w-6 h-6" />
+                    </div>
                     <div className="space-y-0.5 text-xs">
                       <div className="font-bold text-emerald-700 dark:text-emerald-400">
-                        Nabil Bank QR (SUJAN G.C.)
+                        Scan via Bank QR Code
                       </div>
-                      <div className="font-mono font-bold text-foreground">
-                        A/C: 27710017501941
+                      <div className="text-muted-foreground text-[11px]">
+                        Fonepay, Mobile Banking, eSewa & Wallets
                       </div>
                     </div>
                   </div>
@@ -1859,9 +1857,10 @@ export default function RestaurantPage() {
                     size="sm"
                     variant="outline"
                     onClick={() => setQrModalOpen(true)}
-                    className="h-7 text-xs border-emerald-600 text-emerald-700"
+                    className="h-8 text-xs border-emerald-600 text-emerald-700 dark:text-emerald-300 font-bold gap-1"
                   >
-                    View QR
+                    <QrCode className="w-3.5 h-3.5" />
+                    <span>Show QR</span>
                   </Button>
                 </div>
               )}

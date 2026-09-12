@@ -17,6 +17,7 @@ import {
   UserCog,
   Hotel,
   Utensils,
+  QrCode,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SessionUser } from "@/types";
@@ -109,6 +110,12 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
           href: "/staff",
           icon: UserCog,
           show: role === "OWNER",
+        },
+        {
+          label: "Payment QR & Banks",
+          href: "/payment-qr",
+          icon: QrCode,
+          show: role === "OWNER" || role === "MANAGER",
         },
         {
           label: "Audit Logs",

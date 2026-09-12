@@ -325,3 +325,19 @@ model DiningOrderItem {
   @@index([orderId])
 }
 
+model PaymentQr {
+  id            String   @id @default(cuid())
+  bankName      String
+  accountName   String
+  accountNumber String
+  qrImageUrl    String
+  isDefault     Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isDefault])
+  @@index([isActive])
+}
+
