@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { LogOut, ShieldCheck, UserCheck, KeyRound, Clock, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -81,7 +82,7 @@ export function Header({ user, onMobileMenuToggle }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 px-4 md:px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-40 flex items-center gap-3 border-b bg-background/95 px-4 md:px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-[env(safe-area-inset-top,0px)] h-[calc(3.5rem+env(safe-area-inset-top,0px))] transition-all">
       <Button
         variant="ghost"
         size="icon"
@@ -93,6 +94,13 @@ export function Header({ user, onMobileMenuToggle }: HeaderProps) {
       </Button>
 
       <div className="flex items-center gap-2 md:hidden">
+        <Image
+          src="/images/logo.png"
+          alt="NEW HOTEL SURYA"
+          width={24}
+          height={24}
+          className="rounded-md object-cover"
+        />
         <span className="font-bold text-sm tracking-tight text-primary">
           NEW HOTEL SURYA
         </span>

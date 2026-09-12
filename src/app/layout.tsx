@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   applicationName: "NEW HOTEL SURYA",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "NEW HOTEL SURYA",
   },
   formatDetection: {
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   other: {
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-status-bar-style": "default",
     "apple-mobile-web-app-title": "NEW HOTEL SURYA",
   },
 };

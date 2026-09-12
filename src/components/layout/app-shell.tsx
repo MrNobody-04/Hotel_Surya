@@ -39,7 +39,7 @@ export function AppShell({ user, children }: AppShellProps) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+    <div className="flex h-[100dvh] overflow-hidden bg-background text-foreground">
       {/* Desktop Sidebar */}
       <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 z-30">
         <Sidebar user={user} />
@@ -52,7 +52,7 @@ export function AppShell({ user, children }: AppShellProps) {
             className="fixed inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-card z-50">
+          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-card z-50 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]">
             <Sidebar user={user} onNavigate={() => setMobileMenuOpen(false)} />
           </div>
         </div>
@@ -64,7 +64,7 @@ export function AppShell({ user, children }: AppShellProps) {
           user={user}
           onMobileMenuToggle={() => setMobileMenuOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-x-none p-4 md:p-6 lg:p-8 flex flex-col justify-between">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-x-none p-4 md:p-6 lg:p-8 flex flex-col justify-between pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
           <div className="mx-auto max-w-7xl w-full overflow-x-hidden">{children}</div>
           <footer className="mt-12 pt-6 pb-2 border-t text-center text-xs text-muted-foreground">
             © {new Date().getFullYear()} NEW HOTEL SURYA. All Rights Reserved. • Developed by <span className="font-semibold text-foreground">SujanGC</span>
