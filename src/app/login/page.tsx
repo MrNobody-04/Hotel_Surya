@@ -41,7 +41,7 @@ export default function LoginPage() {
         throw new Error(data.error || "Login failed");
       }
 
-      toast.success("Welcome Krishna Gc!");
+      toast.success(`Welcome ${data.user?.name || "back"}!`);
       router.push("/");
       router.refresh();
     } catch (err: any) {
@@ -102,7 +102,7 @@ export default function LoginPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="gcsujan321@gmail.com"
+                    placeholder="staff@newhotelsurya.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-9"

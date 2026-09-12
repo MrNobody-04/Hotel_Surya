@@ -7,19 +7,21 @@ async function main() {
   console.log("🌱 Starting Hotel Surya database seed...");
 
   // 1. Seed Owner User
-  const passwordHash = await bcrypt.hash("Suj@ngc123", 10);
+  const defaultOwnerEmail = process.env.SEED_OWNER_EMAIL || "owner@hotelsurya.com";
+  const defaultOwnerPassword = process.env.SEED_OWNER_PASSWORD || "SuryaOwner@2026#Secure";
+  const passwordHash = await bcrypt.hash(defaultOwnerPassword, 10);
 
   const owner = await prisma.user.upsert({
-    where: { email: "gcsujan321@gmail.com" },
+    where: { email: defaultOwnerEmail },
     update: {
       passwordHash,
       role: "OWNER" as any,
       isActive: true,
-      name: "Krishna Gc",
+      name: "Hotel Owner",
     },
     create: {
-      name: "Krishna Gc",
-      email: "gcsujan321@gmail.com",
+      name: "Hotel Owner",
+      email: defaultOwnerEmail,
       passwordHash,
       role: "OWNER" as any,
       isActive: true,
