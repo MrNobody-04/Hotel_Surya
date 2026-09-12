@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SessionUser } from "@/types";
+import { InstallAppButton } from "@/components/pwa/install-prompt";
 
 interface SidebarProps {
   user: SessionUser | null;
@@ -183,6 +184,7 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
 
       {/* Hotel Surya Status Footer */}
       <div className="p-4 border-t bg-muted/20 space-y-2">
+        <InstallAppButton className="w-full justify-center" />
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

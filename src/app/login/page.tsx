@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { InstallAppButton } from "@/components/pwa/install-prompt";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -124,6 +125,11 @@ export default function LoginPage() {
               </Button>
             </form>
           </CardContent>
+
+          <CardFooter className="pt-2 pb-5 px-6 flex flex-col items-center border-t border-border/40">
+            <p className="text-[11px] text-muted-foreground mb-2">Accessing on your phone?</p>
+            <InstallAppButton className="w-full justify-center py-2 text-xs font-semibold" />
+          </CardFooter>
         </Card>
 
         {/* Security Notice & Footer */}
