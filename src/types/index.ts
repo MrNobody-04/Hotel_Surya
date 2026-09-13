@@ -164,3 +164,63 @@ export interface AuditLogDTO {
   ipAddress?: string | null;
   timestamp: string;
 }
+
+export type DiningTableType = "CABIN" | "HALL";
+export type DiningTableStatus = "AVAILABLE" | "OCCUPIED" | "RESERVED";
+export type DiningOrderStatus = "ACTIVE" | "COMPLETED" | "CANCELLED";
+
+export interface DiningOrderItemDTO {
+  id: string;
+  orderId: string;
+  category: BillItemCategory;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface DiningOrderDTO {
+  id: string;
+  tableId: string;
+  table?: DiningTableDTO;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  guestCount: number;
+  status: DiningOrderStatus;
+  totalAmount: number;
+  paidAmount: number;
+  paymentMethod?: PaymentMethod | null;
+  notes?: string | null;
+  createdById?: string | null;
+  settledAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: DiningOrderItemDTO[];
+}
+
+export interface DiningTableDTO {
+  id: string;
+  name: string;
+  type: DiningTableType;
+  capacity: number;
+  status: DiningTableStatus;
+  notes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  activeOrder?: DiningOrderDTO | null;
+}
+
+export interface PaymentQrDTO {
+  id: string;
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  qrImageUrl: string;
+  isDefault: boolean;
+  isActive: boolean;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

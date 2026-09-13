@@ -13,6 +13,10 @@ async function main() {
     "Expense",
     "AuditLog",
     "ServiceItem",
+    "DiningTable",
+    "DiningOrder",
+    "DiningOrderItem",
+    "PaymentQr",
   ];
 
   for (const t of tables) {
