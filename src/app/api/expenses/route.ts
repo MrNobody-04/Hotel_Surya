@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "@/server/auth/rbac";
 import { getExpenses, createExpense } from "@/server/services/expense.service";
 import { ExpenseCategory, PaymentMethod } from "@/types";
+import { getNepalDateRange } from "@/lib/utils";
 
 const expenseSchema = z.object({
   title: z.string().min(2, "Title is required"),
@@ -36,8 +37,18 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category") as ExpenseCategory | null;
     const paymentMethod = searchParams.get("paymentMethod") as PaymentMethod | null;
-    const startDate = searchParams.get("startDate") ? new Date(searchParams.get("startDate")!) : undefined;
-    const endDate = searchParams.get("endDate") ? new Date(searchParams.get("endDate")!) : undefined;
+    const period = searchParams.get("period");
+    let startDate = searchParams.get("startDate") ? new Date(searchParams.get("startDate")!) : undefined;
+    let endDate = searchParams.get("endDate") ? new Date(searchParams.get("endDate")!) : undefined;
+
+    if (period && !startDate && !endDate) {
+      const range = getNepalDateRange(period);
+      if (range) {
+        startDate = range.startDate;
+        endDate = range.endDate;
+      }
+    }
+
     const take = Number(searchParams.get("take")) || 50;
     const skip = Number(searchParams.get("skip")) || 0;
 

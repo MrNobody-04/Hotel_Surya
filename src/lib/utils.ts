@@ -73,3 +73,41 @@ export function getTodayNepalDateString(): string {
   });
   return formatter.format(now); // returns YYYY-MM-DD
 }
+
+export type TimePeriod = "TODAY" | "YESTERDAY" | "WEEK" | "ALL";
+
+/**
+ * Returns UTC Date objects for start and end of a given period in Nepal timezone (UTC+5:45).
+ */
+export function getNepalDateRange(period: TimePeriod | string | null | undefined): { startDate: Date; endDate: Date } | null {
+  if (!period || period === "ALL") return null;
+
+  const now = new Date();
+  const nepalOffsetMs = 5.75 * 60 * 60 * 1000;
+  const nepalNow = new Date(now.getTime() + nepalOffsetMs);
+
+  const nepalYear = nepalNow.getUTCFullYear();
+  const nepalMonth = nepalNow.getUTCMonth();
+  const nepalDate = nepalNow.getUTCDate();
+
+  if (period === "TODAY") {
+    const startDate = new Date(Date.UTC(nepalYear, nepalMonth, nepalDate, 0, 0, 0, 0) - nepalOffsetMs);
+    const endDate = new Date(Date.UTC(nepalYear, nepalMonth, nepalDate, 23, 59, 59, 999) - nepalOffsetMs);
+    return { startDate, endDate };
+  }
+
+  if (period === "YESTERDAY") {
+    const startDate = new Date(Date.UTC(nepalYear, nepalMonth, nepalDate - 1, 0, 0, 0, 0) - nepalOffsetMs);
+    const endDate = new Date(Date.UTC(nepalYear, nepalMonth, nepalDate - 1, 23, 59, 59, 999) - nepalOffsetMs);
+    return { startDate, endDate };
+  }
+
+  if (period === "WEEK") {
+    // Last 7 days including today (00:00:00 of 6 days ago through 23:59:59 today)
+    const startDate = new Date(Date.UTC(nepalYear, nepalMonth, nepalDate - 6, 0, 0, 0, 0) - nepalOffsetMs);
+    const endDate = new Date(Date.UTC(nepalYear, nepalMonth, nepalDate, 23, 59, 59, 999) - nepalOffsetMs);
+    return { startDate, endDate };
+  }
+
+  return null;
+}

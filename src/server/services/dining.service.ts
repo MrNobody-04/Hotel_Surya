@@ -1,6 +1,7 @@
 import prisma from "@/lib/db";
 import { BillItemCategory, PaymentMethod } from "@/types";
 import { logAuditEvent } from "./audit.service";
+import { getNepalDateRange, TimePeriod } from "@/lib/utils";
 
 export interface DiningOrderItemInput {
   name: string;
@@ -257,6 +258,21 @@ export async function removeDiningOrderItem(
       include: { table: true, items: true },
     });
 
+    await logAuditEvent({
+      userId,
+      userName,
+      action: "REMOVE_ORDER_ITEM",
+      entity: "DINING_ORDER",
+      entityId: orderId,
+      metadata: {
+        itemName: item.name,
+        quantity: item.quantity,
+        removedTotal: item.total,
+        newOrderTotal: newTotal,
+        tableName: updated.table?.name,
+      },
+    });
+
     return updated;
   });
 }
@@ -426,11 +442,42 @@ export async function deleteDiningOrder(
   });
 }
 
-export async function getDiningOrderHistory(limit = 50, skip = 0) {
-  const [orders, total] = await Promise.all([
+export interface DiningHistoryFilter {
+  period?: TimePeriod | string | null;
+  startDate?: Date;
+  endDate?: Date;
+}
+
+export async function getDiningOrderHistory(
+  limit = 50,
+  skip = 0,
+  filter?: DiningHistoryFilter
+) {
+  let dateConditions: any = undefined;
+  const range = filter?.period ? getNepalDateRange(filter.period) : null;
+  const start = filter?.startDate || range?.startDate;
+  const end = filter?.endDate || range?.endDate;
+
+  if (start || end) {
+    const rangeQuery: any = {};
+    if (start) rangeQuery.gte = start;
+    if (end) rangeQuery.lte = end;
+
+    dateConditions = [
+      { settledAt: rangeQuery },
+      { settledAt: null, createdAt: rangeQuery },
+    ];
+  }
+
+  const whereClause: any = {
+    status: { in: ["COMPLETED", "CANCELLED"] as any },
+    ...(dateConditions ? { OR: dateConditions } : {}),
+  };
+
+  const [orders, total, totalRevenueAgg] = await Promise.all([
     prisma.diningOrder.findMany({
-      where: { status: { in: ["COMPLETED", "CANCELLED"] as any } },
-      orderBy: { settledAt: "desc" },
+      where: whereClause,
+      orderBy: [{ settledAt: "desc" }, { createdAt: "desc" }],
       take: limit,
       skip,
       include: {
@@ -439,11 +486,24 @@ export async function getDiningOrderHistory(limit = 50, skip = 0) {
       },
     }),
     prisma.diningOrder.count({
-      where: { status: { in: ["COMPLETED", "CANCELLED"] as any } },
+      where: whereClause,
+    }),
+    prisma.diningOrder.aggregate({
+      where: {
+        ...whereClause,
+        status: "COMPLETED",
+      },
+      _sum: {
+        paidAmount: true,
+      },
     }),
   ]);
 
-  return { orders, total };
+  return {
+    orders,
+    total,
+    totalRevenue: totalRevenueAgg._sum.paidAmount || 0,
+  };
 }
 
 export async function createDiningTable(

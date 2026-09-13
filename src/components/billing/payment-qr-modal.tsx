@@ -48,6 +48,42 @@ const DEFAULT_QR_FALLBACK: PaymentQrItem = {
   updatedAt: new Date().toISOString(),
 };
 
+let memoryCachedQrs: PaymentQrItem[] | null = null;
+
+function getCachedQrs(): PaymentQrItem[] | null {
+  if (memoryCachedQrs && memoryCachedQrs.length > 0) return memoryCachedQrs;
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("hotel_surya_cached_qrs");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          memoryCachedQrs = parsed;
+          return parsed;
+        }
+      }
+    } catch {}
+  }
+  return null;
+}
+
+// Prefetch once on client startup to ensure 0ms render
+if (typeof window !== "undefined") {
+  setTimeout(() => {
+    fetch("/api/payment-qr")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.qrs && data.qrs.length > 0) {
+          memoryCachedQrs = data.qrs;
+          try {
+            localStorage.setItem("hotel_surya_cached_qrs", JSON.stringify(data.qrs));
+          } catch {}
+        }
+      })
+      .catch(() => {});
+  }, 500);
+}
+
 export function PaymentQrModal({
   open,
   onOpenChange,
@@ -55,8 +91,18 @@ export function PaymentQrModal({
   roomNumber,
   guestName,
 }: PaymentQrModalProps) {
-  const [qrs, setQrs] = useState<PaymentQrItem[]>([DEFAULT_QR_FALLBACK]);
-  const [selectedQrId, setSelectedQrId] = useState<string>("default-nabil-qr");
+  const [qrs, setQrs] = useState<PaymentQrItem[]>(() => {
+    const cached = getCachedQrs();
+    return cached || [];
+  });
+  const [selectedQrId, setSelectedQrId] = useState<string | null>(() => {
+    const cached = getCachedQrs();
+    if (cached && cached.length > 0) {
+      const def = cached.find((q) => q.isDefault) || cached[0];
+      return def.id;
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -70,11 +116,20 @@ export function PaymentQrModal({
       if (res.ok) {
         const data = await res.json();
         const list = data.qrs && data.qrs.length > 0 ? data.qrs : [DEFAULT_QR_FALLBACK];
+        memoryCachedQrs = list;
+        try {
+          localStorage.setItem("hotel_surya_cached_qrs", JSON.stringify(list));
+        } catch {}
         setQrs(list);
 
         // Auto select default QR
-        const defaultItem = list.find((q: PaymentQrItem) => q.isDefault) || list[0];
-        setSelectedQrId(defaultItem.id);
+        setSelectedQrId((currentId) => {
+          if (currentId && list.some((q: PaymentQrItem) => q.id === currentId)) {
+            return currentId;
+          }
+          const defaultItem = list.find((q: PaymentQrItem) => q.isDefault) || list[0];
+          return defaultItem.id;
+        });
       }
     } catch (err) {
       console.error(err);
@@ -96,9 +151,13 @@ export function PaymentQrModal({
     }
   }, [open]);
 
-  const activeQr = qrs.find((q) => q.id === selectedQrId) || qrs[0] || DEFAULT_QR_FALLBACK;
+  const activeQr =
+    (selectedQrId ? qrs.find((q) => q.id === selectedQrId) : null) ||
+    qrs[0] ||
+    (loading ? null : DEFAULT_QR_FALLBACK);
 
   const handleCopyAccount = () => {
+    if (!activeQr) return;
     navigator.clipboard.writeText(activeQr.accountNumber);
     toast.success(`Account number ${activeQr.accountNumber} copied!`);
   };
@@ -173,61 +232,70 @@ export function PaymentQrModal({
             </div>
           )}
 
-          {/* QR Code Graphic Container */}
-          <div className="my-2 p-3 bg-white rounded-2xl border-2 border-emerald-500/30 shadow-md flex flex-col items-center">
-            <img
-              src={activeQr.qrImageUrl}
-              alt={`${activeQr.bankName} QR Code`}
-              className="w-full max-w-[250px] h-auto max-h-[250px] object-contain rounded-xl"
-            />
-            <div className="mt-1 flex items-center gap-1.5 text-xs font-bold text-foreground">
-              <span>{activeQr.bankName}</span>
-              {activeQr.isDefault && (
-                <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-600/40">
-                  Primary
-                </Badge>
-              )}
+          {/* QR Code Graphic Container & Bank Details */}
+          {!activeQr ? (
+            <div className="my-4 p-8 bg-muted/20 rounded-2xl border flex flex-col items-center justify-center gap-3 min-h-[220px]">
+              <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
+              <span className="text-xs text-muted-foreground">Loading payment QR code...</span>
             </div>
-          </div>
-
-          {/* Bank & Account Details Card */}
-          <div className="text-left bg-muted/40 p-3 rounded-xl border space-y-1.5 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <User className="w-3.5 h-3.5" /> Account Name:
-              </span>
-              <span className="font-bold text-foreground">{activeQr.accountName}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <Building2 className="w-3.5 h-3.5" /> Bank / Wallet:
-              </span>
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                {activeQr.bankName}
-              </span>
-            </div>
-            <div className="flex items-center justify-between pt-1 border-t">
-              <span className="text-muted-foreground">Account Number:</span>
-              <div className="flex items-center gap-1.5 font-mono font-bold text-foreground">
-                <span>{activeQr.accountNumber}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleCopyAccount}
-                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                  title="Copy Account Number"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                </Button>
+          ) : (
+            <>
+              <div className="my-2 p-3 bg-white rounded-2xl border-2 border-emerald-500/30 shadow-md flex flex-col items-center">
+                <img
+                  src={activeQr.qrImageUrl}
+                  alt={`${activeQr.bankName} QR Code`}
+                  className="w-full max-w-[250px] h-auto max-h-[250px] object-contain rounded-xl"
+                />
+                <div className="mt-1 flex items-center gap-1.5 text-xs font-bold text-foreground">
+                  <span>{activeQr.bankName}</span>
+                  {activeQr.isDefault && (
+                    <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-600/40">
+                      Primary
+                    </Badge>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
 
-          <p className="text-[11px] text-muted-foreground text-center">
-            {activeQr.notes ||
-              "Works with Fonepay, Nabil Smart, eSewa, Khalti, IME Pay & all Nepali banking apps."}
-          </p>
+              {/* Bank & Account Details Card */}
+              <div className="text-left bg-muted/40 p-3 rounded-xl border space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <User className="w-3.5 h-3.5" /> Account Name:
+                  </span>
+                  <span className="font-bold text-foreground">{activeQr.accountName}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Building2 className="w-3.5 h-3.5" /> Bank / Wallet:
+                  </span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    {activeQr.bankName}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t">
+                  <span className="text-muted-foreground">Account Number:</span>
+                  <div className="flex items-center gap-1.5 font-mono font-bold text-foreground">
+                    <span>{activeQr.accountNumber}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleCopyAccount}
+                      className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                      title="Copy Account Number"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-muted-foreground text-center">
+                {activeQr.notes ||
+                  "Works with Fonepay, Nabil Smart, eSewa, Khalti, IME Pay & all Nepali banking apps."}
+              </p>
+            </>
+          )}
 
           <div className="flex items-center justify-between gap-2 pt-2">
             {canManage ? (

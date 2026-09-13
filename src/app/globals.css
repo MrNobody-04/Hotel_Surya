@@ -59,6 +59,23 @@
     overflow-x: hidden;
     overscroll-behavior-x: none;
     -webkit-tap-highlight-color: transparent;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y pinch-zoom;
+  }
+
+  /* Prevent stuck scroll lock on mobile and desktop modals */
+  body[data-scroll-locked] {
+    overflow: hidden !important;
+    overscroll-behavior: contain;
+  }
+
+  /* Hardware-accelerated smooth momentum scrolling */
+  .overflow-y-auto,
+  .overflow-x-auto,
+  main,
+  [data-radix-scroll-area-viewport] {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 }
 

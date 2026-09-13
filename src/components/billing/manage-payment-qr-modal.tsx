@@ -132,7 +132,12 @@ export function ManagePaymentQrModal({
       const res = await fetch("/api/payment-qr?all=true");
       if (res.ok) {
         const data = await res.json();
-        setQrs(data.qrs || []);
+        const list = data.qrs || [];
+        setQrs(list);
+        try {
+          const activeList = list.filter((q: PaymentQrItem) => q.isActive);
+          localStorage.setItem("hotel_surya_cached_qrs", JSON.stringify(activeList.length > 0 ? activeList : list));
+        } catch {}
       }
     } catch (err) {
       console.error(err);

@@ -50,6 +50,7 @@ export default function ExpensesPage() {
 
   // Filter
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [periodFilter, setPeriodFilter] = useState<"ALL" | "TODAY" | "YESTERDAY" | "WEEK">("ALL");
 
   // Create Modal
   const [createOpen, setCreateOpen] = useState(false);
@@ -67,13 +68,18 @@ export default function ExpensesPage() {
   // View Receipt Modal
   const [viewReceiptUrl, setViewReceiptUrl] = useState<string | null>(null);
 
-  const fetchExpenses = async () => {
+  const fetchExpenses = async (overridePeriod?: "ALL" | "TODAY" | "YESTERDAY" | "WEEK", overrideCategory?: string) => {
     try {
       setLoading(true);
-      const url =
-        categoryFilter !== "ALL"
-          ? `/api/expenses?category=${categoryFilter}`
-          : `/api/expenses`;
+      const activePeriod = overridePeriod !== undefined ? overridePeriod : periodFilter;
+      const activeCat = overrideCategory !== undefined ? overrideCategory : categoryFilter;
+
+      const params = new URLSearchParams();
+      if (activeCat !== "ALL") params.set("category", activeCat);
+      if (activePeriod !== "ALL") params.set("period", activePeriod);
+
+      const queryString = params.toString();
+      const url = queryString ? `/api/expenses?${queryString}` : `/api/expenses`;
 
       const res = await fetch(url);
       if (res.ok) {
@@ -90,8 +96,8 @@ export default function ExpensesPage() {
   };
 
   useEffect(() => {
-    fetchExpenses();
-  }, [categoryFilter]);
+    fetchExpenses(periodFilter, categoryFilter);
+  }, [categoryFilter, periodFilter]);
 
   const handleReceiptSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -248,8 +254,13 @@ export default function ExpensesPage() {
       {/* Summary KPI Banner */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-4 bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900">
-          <div className="text-xs font-semibold text-rose-800 dark:text-rose-300 uppercase tracking-wider">
-            Total Filtered Outflow
+          <div className="text-xs font-semibold text-rose-800 dark:text-rose-300 uppercase tracking-wider flex items-center justify-between">
+            <span>Total Filtered Outflow</span>
+            {periodFilter !== "ALL" && (
+              <Badge variant="outline" className="text-[10px] bg-rose-100/50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 border-rose-200">
+                {periodFilter === "TODAY" ? "Today" : periodFilter === "YESTERDAY" ? "Yesterday" : "Past 7 Days"}
+              </Badge>
+            )}
           </div>
           <div className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono mt-1">
             {formatCurrency(totalAmount)}
@@ -261,27 +272,70 @@ export default function ExpensesPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/30 border rounded-xl">
-        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          <Filter className="w-3.5 h-3.5" />
-          <span>Category:</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-muted/30 border rounded-xl">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Period Filter Pills */}
+          <div className="flex items-center gap-1 bg-background/90 p-1 rounded-lg border shadow-xs">
+            <Button
+              type="button"
+              variant={periodFilter === "TODAY" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPeriodFilter("TODAY")}
+              className="h-7 text-xs px-2.5"
+            >
+              Today
+            </Button>
+            <Button
+              type="button"
+              variant={periodFilter === "YESTERDAY" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPeriodFilter("YESTERDAY")}
+              className="h-7 text-xs px-2.5"
+            >
+              Yesterday
+            </Button>
+            <Button
+              type="button"
+              variant={periodFilter === "WEEK" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPeriodFilter("WEEK")}
+              className="h-7 text-xs px-2.5"
+            >
+              1 Week
+            </Button>
+            <Button
+              type="button"
+              variant={periodFilter === "ALL" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPeriodFilter("ALL")}
+              className="h-7 text-xs px-2.5"
+            >
+              All Time
+            </Button>
+          </div>
+
+          {/* Category Dropdown */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:inline">
+              Category:
+            </span>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="h-8 w-48 sm:w-56 text-xs bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Expense Categories</SelectItem>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="h-8 w-56 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Expense Categories</SelectItem>
-            {CATEGORIES.map((cat) => (
-              <SelectItem key={cat.value} value={cat.value}>
-                {cat.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <div className="ml-auto text-xs text-muted-foreground">
+        <div className="text-xs text-muted-foreground ml-auto">
           Showing {expenses.length} records
         </div>
       </div>

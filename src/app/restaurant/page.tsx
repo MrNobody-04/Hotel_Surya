@@ -23,6 +23,8 @@ import {
   Users,
   Check,
   Pencil,
+  Calendar,
+  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -198,13 +200,23 @@ export default function RestaurantPage() {
     }
   };
 
-  const fetchHistory = async () => {
+  // History filter period & revenue
+  const [historyPeriod, setHistoryPeriod] = useState<"ALL" | "TODAY" | "YESTERDAY" | "WEEK">("TODAY");
+  const [historyTotalRevenue, setHistoryTotalRevenue] = useState<number>(0);
+  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
+
+  const fetchHistory = async (overridePeriod?: "ALL" | "TODAY" | "YESTERDAY" | "WEEK") => {
     try {
       setHistoryLoading(true);
-      const res = await fetch("/api/dining/history?limit=50");
+      const activeP = overridePeriod !== undefined ? overridePeriod : historyPeriod;
+      const url = activeP && activeP !== "ALL"
+        ? `/api/dining/history?limit=100&period=${activeP}`
+        : `/api/dining/history?limit=100`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setHistoryOrders(data.orders || []);
+        setHistoryTotalRevenue(data.totalRevenue || 0);
       }
     } catch (err) {
       console.error(err);
@@ -221,9 +233,58 @@ export default function RestaurantPage() {
 
   useEffect(() => {
     if (viewTab === "history") {
-      fetchHistory();
+      fetchHistory(historyPeriod);
     }
-  }, [viewTab]);
+  }, [viewTab, historyPeriod]);
+
+  // Remove individual item from order tray
+  const handleRemoveTrayItem = (name: string) => {
+    setSelectedTray((prev) => {
+      const copy = { ...prev };
+      delete copy[name];
+      return copy;
+    });
+  };
+
+  // Remove individual item from an active table's live order
+  const handleRemoveActiveOrderItem = async (itemId: string, itemName: string) => {
+    if (!activeBillTable || !activeBillTable.activeOrder) return;
+    const orderId = activeBillTable.activeOrder.id;
+
+    if (!confirm(`Are you sure you want to remove "${itemName}" from ${activeBillTable.name}'s order?`)) {
+      return;
+    }
+
+    try {
+      setRemovingItemId(itemId);
+      const res = await fetch(`/api/dining/orders/${orderId}/items?itemId=${itemId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to remove item");
+      }
+
+      toast.success(`Removed "${itemName}" from order`);
+
+      if (data.order) {
+        setActiveBillTable((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            activeOrder: data.order,
+          };
+        });
+      }
+
+      fetchTables();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to remove item from order");
+    } finally {
+      setRemovingItemId(null);
+    }
+  };
 
   // Handle Opening "New Order"
   const handleOpenNewOrder = (table: TableData) => {
@@ -1040,17 +1101,72 @@ export default function RestaurantPage() {
         {/* History Tab */}
         <TabsContent value="history">
           <Card className="shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 gap-3">
               <div>
                 <CardTitle className="text-base">Completed Restaurant Orders</CardTitle>
                 <CardDescription>
                   Historical settled dining records from Cabins and Halls
                 </CardDescription>
               </div>
-              <Button variant="outline" size="sm" onClick={fetchHistory} disabled={historyLoading}>
-                <RefreshCw className={`w-3.5 h-3.5 ${historyLoading ? "animate-spin" : ""}`} />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => fetchHistory(historyPeriod)} disabled={historyLoading}>
+                  <RefreshCw className={`w-3.5 h-3.5 ${historyLoading ? "animate-spin" : ""}`} />
+                  <span className="hidden sm:inline ml-1 text-xs">Refresh</span>
+                </Button>
+              </div>
             </CardHeader>
+
+            {/* Filter Bar & Metric Pill */}
+            <div className="px-4 sm:px-6 pb-4 pt-1 flex flex-wrap items-center justify-between gap-3 border-b">
+              <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-lg border">
+                <Button
+                  type="button"
+                  variant={historyPeriod === "TODAY" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setHistoryPeriod("TODAY")}
+                  className="h-7 text-xs px-2.5"
+                >
+                  Today
+                </Button>
+                <Button
+                  type="button"
+                  variant={historyPeriod === "YESTERDAY" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setHistoryPeriod("YESTERDAY")}
+                  className="h-7 text-xs px-2.5"
+                >
+                  Yesterday
+                </Button>
+                <Button
+                  type="button"
+                  variant={historyPeriod === "WEEK" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setHistoryPeriod("WEEK")}
+                  className="h-7 text-xs px-2.5"
+                >
+                  This Week
+                </Button>
+                <Button
+                  type="button"
+                  variant={historyPeriod === "ALL" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setHistoryPeriod("ALL")}
+                  className="h-7 text-xs px-2.5"
+                >
+                  All Time
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2 bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 px-3 py-1.5 rounded-lg text-xs">
+                <span className="text-muted-foreground">Period Revenue:</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(historyTotalRevenue)}
+                </span>
+                <span className="text-muted-foreground border-l pl-2 ml-1">
+                  {historyOrders.length} {historyOrders.length === 1 ? "order" : "orders"}
+                </span>
+              </div>
+            </div>
             <CardContent className="p-0">
               {historyLoading ? (
                 <div className="p-8 text-center text-xs text-muted-foreground">
@@ -1573,6 +1689,7 @@ export default function RestaurantPage() {
                             variant="outline"
                             onClick={() => handleUpdateTrayQty(item.name, -1)}
                             className="h-7 w-7 text-xs"
+                            title="Decrease quantity"
                           >
                             -
                           </Button>
@@ -1583,8 +1700,19 @@ export default function RestaurantPage() {
                             variant="outline"
                             onClick={() => handleUpdateTrayQty(item.name, 1)}
                             className="h-7 w-7 text-xs"
+                            title="Increase quantity"
                           >
                             +
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleRemoveTrayItem(item.name)}
+                            className="h-7 w-7 text-xs text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                            title="Remove from tray"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                           </Button>
                         </div>
                       </div>
@@ -1690,6 +1818,7 @@ export default function RestaurantPage() {
                       <th className="px-1.5 py-2 text-center">Qty</th>
                       <th className="px-2 py-2 text-right">Rate</th>
                       <th className="px-2.5 py-2 text-right">Total</th>
+                      <th className="px-1.5 py-2 text-center w-8">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-xs">
@@ -1709,6 +1838,23 @@ export default function RestaurantPage() {
                         </td>
                         <td className="px-3 py-2 text-right font-mono font-bold text-foreground">
                           {formatCurrency(it.total)}
+                        </td>
+                        <td className="px-1.5 py-2 text-center">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            disabled={!it.id || removingItemId === it.id}
+                            onClick={() => it.id && handleRemoveActiveOrderItem(it.id, it.name)}
+                            className="h-6 w-6 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                            title={`Remove ${it.name} from order`}
+                          >
+                            {removingItemId === it.id ? (
+                              <RefreshCw className="w-3 h-3 animate-spin text-rose-600" />
+                            ) : (
+                              <Trash2 className="w-3 h-3 text-rose-500" />
+                            )}
+                          </Button>
                         </td>
                       </tr>
                     ))}

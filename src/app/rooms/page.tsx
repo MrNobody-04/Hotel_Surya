@@ -28,6 +28,21 @@ import { formatCurrency, formatNepalDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { RoomDTO, RoomStatus, RoomType } from "@/types";
 
+const ROOM_IMAGES: Record<string, string> = {
+  "101": "/images/rooms/room-101.jpg",
+  "102": "/images/rooms/room-102.jpg",
+  "103": "/images/rooms/room-103.jpg",
+  "104": "/images/rooms/room-104.jpg",
+  "105": "/images/rooms/room-105.jpg",
+  "106": "/images/rooms/room-106.jpg",
+  "107": "/images/rooms/room-107.jpg",
+};
+
+function getRoomImageUrl(roomNumber: string, type: string = "NON_AC"): string {
+  if (ROOM_IMAGES[roomNumber]) return ROOM_IMAGES[roomNumber];
+  return type === "AC" ? "/images/rooms/room-101.jpg" : "/images/rooms/room-105.jpg";
+}
+
 export default function RoomsPage() {
   const [rooms, setRooms] = useState<RoomDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -291,7 +306,7 @@ export default function RoomsPage() {
             return (
               <Card
                 key={room.id}
-                className={`shadow-sm border-2 transition-all ${
+                className={`shadow-sm border-2 transition-all overflow-hidden flex flex-col ${
                   room.status === "OCCUPIED"
                     ? "border-blue-500/30 bg-blue-50/10 dark:bg-blue-950/10"
                     : room.status === "MAINTENANCE"
@@ -299,34 +314,48 @@ export default function RoomsPage() {
                     : "border-border hover:border-primary/40"
                 }`}
               >
-                <CardHeader className="flex flex-row items-start justify-between pb-2 space-y-0">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold font-mono tracking-tight">
-                        {room.roomNumber}
-                      </span>
-                      <Badge variant={room.type === "AC" ? "purple" : "secondary"}>
-                        {room.type === "AC" ? "AC Room" : "Non-AC"}
-                      </Badge>
+                {/* Room Photo Banner */}
+                <div className="relative w-full h-44 sm:h-48 overflow-hidden bg-muted group">
+                  <img
+                    src={getRoomImageUrl(room.roomNumber, room.type)}
+                    alt={`Room ${room.roomNumber}`}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                  {/* Gradient Scrim */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30 pointer-events-none" />
+
+                  {/* Top Badges & Edit Button */}
+                  <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
+                    <Badge variant={room.type === "AC" ? "purple" : "secondary"} className="shadow-xs font-semibold backdrop-blur-xs">
+                      {room.type === "AC" ? "AC Room" : "Non-AC"}
+                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      {getStatusBadge(room.status)}
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="h-7 w-7 rounded-full bg-background/80 hover:bg-background shadow-xs backdrop-blur-xs text-foreground"
+                        onClick={() => handleOpenEdit(room)}
+                        title="Edit Room"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {room.notes || "No room notes"}
+                  </div>
+
+                  {/* Bottom Room Title & Description */}
+                  <div className="absolute bottom-2.5 left-3 right-3 z-10 text-white">
+                    <div className="text-xl sm:text-2xl font-black font-mono tracking-tight drop-shadow-md">
+                      Room {room.roomNumber}
+                    </div>
+                    <p className="text-xs text-white/90 line-clamp-1 drop-shadow-sm font-medium">
+                      {room.notes || `${room.type === "AC" ? "Air Conditioned" : "Standard"} Room`}
                     </p>
                   </div>
-                  <div className="flex flex-col items-end gap-1.5">
-                    {getStatusBadge(room.status)}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                      onClick={() => handleOpenEdit(room)}
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </CardHeader>
+                </div>
 
-                <CardContent className="space-y-3 pt-2">
+                <CardContent className="space-y-3 pt-3 flex-1 flex flex-col justify-between">
                   {isOccupied && room.currentStay ? (
                     <div className="p-3 bg-muted/40 rounded-lg space-y-2 border text-xs">
                       <div className="flex items-center justify-between font-medium">
@@ -440,6 +469,20 @@ export default function RoomsPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            {editingRoom && (
+              <div className="relative w-full h-36 rounded-xl overflow-hidden border shadow-inner">
+                <img
+                  src={getRoomImageUrl(editingRoom.roomNumber, editingRoom.type)}
+                  alt={`Room ${editingRoom.roomNumber}`}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-xs px-2.5 py-1 rounded-md text-xs text-white font-medium flex items-center gap-1.5">
+                  <span className="font-bold">Room {editingRoom.roomNumber}</span>
+                  <span className="text-white/70">• {editingRoom.type === "AC" ? "AC Deluxe" : "Non-AC Standard"}</span>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label htmlFor="roomNumber">Room Number</Label>
               <Input
