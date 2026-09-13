@@ -194,7 +194,7 @@ export default function CheckoutPage({
         </Link>
       </div>
 
-      <Card className="shadow-lg border-2 border-border overflow-hidden">
+      <Card className="shadow-lg border-2 border-border overflow-hidden border-layered card-3d">
         <CardHeader className="pb-4 border-b bg-muted/20">
           <div className="flex items-center justify-between">
             <div>
@@ -236,7 +236,7 @@ export default function CheckoutPage({
 
         <CardContent className="pt-6 space-y-6">
           {/* Final Financial Breakdown */}
-          <div className="p-4 bg-muted/30 border rounded-xl space-y-2.5 text-sm">
+          <div className="p-4 bg-muted/30 border rounded-xl space-y-2.5 text-sm border-layered shadow-xs">
             <div className="flex items-center justify-between text-muted-foreground">
               <span>Room Charge:</span>
               <span className="font-mono">{formatCurrency(calc.roomCharge)}</span>
@@ -288,7 +288,7 @@ export default function CheckoutPage({
 
           {/* Outstanding Balance Settlement Section */}
           {calc.outstandingBalance > 0 && (
-            <div className="p-4 border-2 border-amber-500/40 bg-amber-500/5 rounded-xl space-y-3">
+            <div className="p-4 border-2 border-amber-500/40 bg-amber-500/5 rounded-xl space-y-3 border-layered shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-2 text-amber-900 dark:text-amber-200 font-bold text-sm">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />

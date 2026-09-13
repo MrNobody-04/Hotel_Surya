@@ -30,6 +30,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+import { TiltCard } from "@/components/ui/tilt-card";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#6366f1"];
 
@@ -156,7 +157,7 @@ export default function AnalyticsPage() {
 
       {/* Revenue Stream Breakdown (Hotel Rooms vs Restaurant & Cabins) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="shadow-sm border-l-4 border-l-blue-500 bg-blue-50/20 dark:bg-blue-950/20">
+        <TiltCard variant="kpi" maxTilt={3.5} className="shadow-sm border-l-4 border-l-blue-500 bg-blue-50/20 dark:bg-blue-950/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs uppercase font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
               <Bed className="w-3.5 h-3.5" />
@@ -171,9 +172,9 @@ export default function AnalyticsPage() {
               From {data?.staysCount || 0} room check-in stays
             </p>
           </CardContent>
-        </Card>
+        </TiltCard>
 
-        <Card className="shadow-sm border-l-4 border-l-purple-500 bg-purple-50/20 dark:bg-purple-950/20">
+        <TiltCard variant="kpi" maxTilt={3.5} className="shadow-sm border-l-4 border-l-purple-500 bg-purple-50/20 dark:bg-purple-950/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs uppercase font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
               <Utensils className="w-3.5 h-3.5" />
@@ -188,9 +189,9 @@ export default function AnalyticsPage() {
               From {diningOrdersCount} completed dining orders
             </p>
           </CardContent>
-        </Card>
+        </TiltCard>
 
-        <Card className="shadow-sm border-l-4 border-l-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20">
+        <TiltCard variant="kpi" maxTilt={3.5} className="shadow-sm border-l-4 border-l-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs uppercase font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
               <DollarSign className="w-3.5 h-3.5" />
@@ -213,12 +214,12 @@ export default function AnalyticsPage() {
               ) : null}
             </div>
           </CardContent>
-        </Card>
+        </TiltCard>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="shadow-sm">
+        <TiltCard variant="kpi" maxTilt={3.5} className="shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs uppercase font-semibold text-muted-foreground">
               Total Revenue Collected
@@ -230,9 +231,9 @@ export default function AnalyticsPage() {
             </div>
             <p className="text-xs text-muted-foreground mt-1">Hotel stays + Cabins/Dining</p>
           </CardContent>
-        </Card>
+        </TiltCard>
 
-        <Card className="shadow-sm">
+        <TiltCard variant="kpi" maxTilt={3.5} className="shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs uppercase font-semibold text-muted-foreground">
               Total Expenses Outflow
@@ -244,9 +245,9 @@ export default function AnalyticsPage() {
             </div>
             <p className="text-xs text-muted-foreground mt-1">Salaries, groceries, utilities</p>
           </CardContent>
-        </Card>
+        </TiltCard>
 
-        <Card className="shadow-sm">
+        <TiltCard variant="kpi" maxTilt={3.5} className="shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs uppercase font-semibold text-muted-foreground">
               Net Operational Result
@@ -264,9 +265,9 @@ export default function AnalyticsPage() {
             </div>
             <p className="text-xs text-muted-foreground mt-1">Revenue minus Expenses</p>
           </CardContent>
-        </Card>
+        </TiltCard>
 
-        <Card className="shadow-sm">
+        <TiltCard variant="kpi" maxTilt={3.5} className="shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs uppercase font-semibold text-muted-foreground">
               Total Stays in Period
@@ -278,13 +279,13 @@ export default function AnalyticsPage() {
             </div>
             <p className="text-xs text-muted-foreground mt-1">Guest stays recorded</p>
           </CardContent>
-        </Card>
+        </TiltCard>
       </div>
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Breakdown by Category (Pie Chart) */}
-        <Card className="shadow-sm">
+        <Card className="shadow-sm border-layered">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <PieChartIcon className="w-4 h-4 text-primary" />
@@ -333,7 +334,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Financial Result (Bar Chart) */}
-        <Card className="shadow-sm">
+        <Card className="shadow-sm border-layered">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-emerald-600" />
@@ -364,7 +365,7 @@ export default function AnalyticsPage() {
       {/* Room Utilization & Top Selling Food/Drinks */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Room Utilization */}
-        <Card className="shadow-sm">
+        <Card className="shadow-sm border-layered">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Bed className="w-4 h-4 text-blue-600" />
@@ -396,7 +397,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Top F&B Items */}
-        <Card className="shadow-sm">
+        <Card className="shadow-sm border-layered">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Utensils className="w-4 h-4 text-amber-600" />

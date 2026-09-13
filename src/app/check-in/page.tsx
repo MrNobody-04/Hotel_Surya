@@ -303,7 +303,7 @@ export default function CheckInPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Step 1: Customer Details */}
-        <Card className="shadow-sm border">
+        <Card className="shadow-sm border border-layered card-3d">
           <CardHeader className="pb-3 border-b bg-muted/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -564,8 +564,8 @@ export default function CheckInPage() {
           </CardContent>
         </Card>
 
-        {/* Step 2: Stay Configuration */}
-        <Card className="shadow-sm border">
+        {/* Step 2: Stay Details */}
+        <Card className="shadow-sm border border-layered card-3d">
           <CardHeader className="pb-3 border-b bg-muted/20">
             <div className="flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">

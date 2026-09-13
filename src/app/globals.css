@@ -218,12 +218,84 @@
       rgba(255, 255, 255, 0.12) 50%,
       rgba(255, 255, 255, 0) 100%
     );
-    background-size: 200% 100%;
-    animation: shimmerSweep 3s infinite;
   }
-  @keyframes shimmerSweep {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+
+  /* Layered physical border and depth */
+  .border-layered {
+    border: 1px solid hsl(var(--border) / 0.85);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  }
+  .dark .border-layered {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  }
+
+  /* Table row interactive depth */
+  .table-row-hover {
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .table-row-hover:hover {
+    background-color: hsl(var(--muted) / 0.6);
+  }
+
+  /* Stagger entrance delays for card grids */
+  .stagger-1 { animation-delay: 0ms; }
+  .stagger-2 { animation-delay: 60ms; }
+  .stagger-3 { animation-delay: 120ms; }
+  .stagger-4 { animation-delay: 180ms; }
+  .stagger-5 { animation-delay: 240ms; }
+  .stagger-6 { animation-delay: 300ms; }
+  .stagger-7 { animation-delay: 360ms; }
+
+  /* Specular Spotlight Gradient Reflection */
+  .spotlight-card {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .spotlight-card::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: radial-gradient(
+      450px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(255, 255, 255, 0.12),
+      transparent 40%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .dark .spotlight-card::before {
+    background: radial-gradient(
+      450px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(255, 255, 255, 0.08),
+      transparent 40%
+    );
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .spotlight-card:hover::before {
+      opacity: 1;
+    }
+  }
+
+  /* Spotlight for Cabins (Warm Amber Reflection) */
+  .spotlight-cabin::before {
+    background: radial-gradient(
+      450px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(245, 158, 11, 0.15),
+      transparent 40%
+    ) !important;
+  }
+
+  /* Spotlight for Halls (Azure Blue Reflection) */
+  .spotlight-hall::before {
+    background: radial-gradient(
+      450px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(59, 130, 246, 0.15),
+      transparent 40%
+    ) !important;
   }
 }
 

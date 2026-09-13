@@ -381,7 +381,7 @@ export default function StayBillPage({
       </div>
 
       {/* Main Unified Bill Card / Print Invoice */}
-      <Card className="shadow-lg border-2 border-border overflow-hidden">
+      <Card className="shadow-lg border-2 border-border overflow-hidden border-layered card-3d">
         {/* Hotel Surya Printable Header */}
         <CardHeader className="border-b bg-muted/20 pb-4">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -493,7 +493,7 @@ export default function StayBillPage({
 
                   {/* F&B and Other Bill Items */}
                   {stay.billItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-muted/20">
+                    <tr key={item.id} className="table-row-hover">
                       <td className="px-3 py-2.5">
                         <Badge
                           variant={
@@ -571,7 +571,7 @@ export default function StayBillPage({
                   </thead>
                   <tbody className="divide-y divide-border text-xs">
                     {stay.payments.map((p) => (
-                      <tr key={p.id} className="hover:bg-muted/20">
+                      <tr key={p.id} className="table-row-hover">
                         <td className="px-3 py-2 text-muted-foreground">
                           {formatNepalDateTime(p.timestamp)}
                         </td>
@@ -597,7 +597,7 @@ export default function StayBillPage({
 
           {/* Financial Calculation Summary Box */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end">
-            <div className="w-full sm:w-80 p-4 bg-muted/30 border rounded-xl space-y-2 text-sm">
+            <div className="w-full sm:w-80 p-4 bg-muted/30 border rounded-xl space-y-2 text-sm border-layered shadow-xs">
               <div className="flex items-center justify-between text-muted-foreground">
                 <span>Room Charges:</span>
                 <span className="font-mono">{formatCurrency(calc.roomCharge)}</span>

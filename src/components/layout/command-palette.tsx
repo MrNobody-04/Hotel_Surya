@@ -72,21 +72,21 @@ export function CommandPalette() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground bg-muted/60 hover:bg-muted rounded-lg border border-input transition-colors w-64 justify-between"
+        className="hidden md:flex items-center gap-2 px-3.5 py-1.5 text-xs text-muted-foreground bg-muted/40 hover:bg-muted/70 rounded-full border border-border/80 hover:border-primary/40 transition-all w-64 justify-between shadow-2xs hover:shadow-xs active:scale-[0.98]"
       >
         <span className="flex items-center gap-2">
-          <Search className="w-3.5 h-3.5" />
+          <Search className="w-3.5 h-3.5 text-primary" />
           <span>Search NEW HOTEL SURYA...</span>
         </span>
-        <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-          <span className="text-xs">Ctrl</span>K
+        <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded-md border bg-background px-1.5 font-mono text-[10px] font-semibold text-muted-foreground shadow-2xs">
+          <span className="text-[10px]">Ctrl</span>K
         </kbd>
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="p-0 max-w-xl overflow-hidden shadow-2xl border-border">
           <div className="flex items-center border-b px-4 py-3 bg-muted/20">
-            <Search className="w-4 h-4 mr-2.5 text-muted-foreground shrink-0" />
+            <Search className="w-4 h-4 mr-2.5 text-primary shrink-0" />
             <input
               type="text"
               value={query}
@@ -98,7 +98,7 @@ export function CommandPalette() {
             {query && (
               <button
                 onClick={() => setQuery("")}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground hover:scale-110 active:scale-95 transition-transform"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -134,7 +134,7 @@ export function CommandPalette() {
                     <button
                       key={item.url}
                       onClick={() => handleSelect(item.url)}
-                      className="w-full flex items-center justify-between px-3 py-2 text-sm rounded-md hover:bg-accent text-left transition-colors"
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg hover:bg-primary/10 hover:text-primary transition-all text-left group hover:translate-x-1"
                     >
                       <span className="flex items-center gap-2.5">
                         {item.icon}

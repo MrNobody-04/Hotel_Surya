@@ -28,6 +28,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { formatNepalDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { CustomerDTO, Gender } from "@/types";
+import { TiltCard } from "@/components/ui/tilt-card";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<CustomerDTO[]>([]);
@@ -234,8 +235,10 @@ export default function CustomersPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {customers.map((cust) => (
-            <Card
+            <TiltCard
               key={cust.id}
+              variant="default"
+              maxTilt={3.5}
               className="shadow-sm border-border hover:border-primary/40 transition-all flex flex-col justify-between"
             >
               <CardHeader className="pb-3 border-b bg-muted/10">
@@ -326,7 +329,7 @@ export default function CustomersPage() {
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
               </CardFooter>
-            </Card>
+            </TiltCard>
           ))}
         </div>
       )}

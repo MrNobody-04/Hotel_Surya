@@ -104,7 +104,7 @@ export default function AuditLogsPage() {
       </div>
 
       {/* Audit Logs Table */}
-      <Card className="shadow-sm">
+      <Card className="shadow-sm border-layered">
         <CardContent className="p-0">
           {loading ? (
             <div className="p-8 text-center text-xs text-muted-foreground">
@@ -143,7 +143,7 @@ export default function AuditLogsPage() {
                     }
 
                     return (
-                      <tr key={log.id} className="hover:bg-muted/20 text-xs">
+                      <tr key={log.id} className="table-row-hover text-xs">
                         <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap">
                           {formatNepalDateTime(log.timestamp)}
                         </td>

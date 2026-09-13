@@ -37,6 +37,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, formatNepalDateTime, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { PaymentQrModal } from "@/components/billing/payment-qr-modal";
+import { TiltCard } from "@/components/ui/tilt-card";
 import { BillItemCategory, PaymentMethod } from "@/types";
 
 const QUICK_CATEGORIES = [
@@ -840,8 +841,10 @@ export default function RestaurantPage() {
               {cabins.map((table) => {
                 const isOccupied = table.status === "OCCUPIED" && table.activeOrder;
                 return (
-                  <Card
+                  <TiltCard
                     key={table.id}
+                    variant="cabin"
+                    maxTilt={5}
                     className={cn(
                       "card-3d card-3d-cabin group relative overflow-hidden flex flex-col justify-between border-2 transition-all duration-300 select-none",
                       isOccupied
@@ -991,7 +994,7 @@ export default function RestaurantPage() {
                         </Button>
                       )}
                     </CardFooter>
-                  </Card>
+                  </TiltCard>
                 );
               })}
             </div>
@@ -1016,8 +1019,10 @@ export default function RestaurantPage() {
               {halls.map((table) => {
                 const isOccupied = table.status === "OCCUPIED" && table.activeOrder;
                 return (
-                  <Card
+                  <TiltCard
                     key={table.id}
+                    variant="hall"
+                    maxTilt={5}
                     className={cn(
                       "card-3d card-3d-hall group relative overflow-hidden flex flex-col justify-between border-2 transition-all duration-300 select-none",
                       isOccupied
@@ -1167,7 +1172,7 @@ export default function RestaurantPage() {
                         </Button>
                       )}
                     </CardFooter>
-                  </Card>
+                  </TiltCard>
                 );
               })}
             </div>
@@ -1176,7 +1181,7 @@ export default function RestaurantPage() {
 
         {/* History Tab */}
         <TabsContent value="history">
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border-layered">
             <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 gap-3">
               <div>
                 <CardTitle className="text-base">Completed Restaurant Orders</CardTitle>
@@ -1269,7 +1274,7 @@ export default function RestaurantPage() {
                     </thead>
                     <tbody className="divide-y divide-border text-xs">
                       {historyOrders.map((ord) => (
-                        <tr key={ord.id} className="hover:bg-muted/20">
+                        <tr key={ord.id} className="table-row-hover">
                           <td className="px-4 py-3 font-mono text-muted-foreground">
                             #{ord.id.slice(0, 8)}
                           </td>

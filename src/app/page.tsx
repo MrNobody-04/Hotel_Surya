@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatNepalDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { PaymentQrModal } from "@/components/billing/payment-qr-modal";
+import { TiltCard } from "@/components/ui/tilt-card";
 
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
@@ -117,11 +118,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Primary KPI Cards Grid */}
+      {/* Primary KPI Cards Grid with 3D Tilt & Specular Lighting */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Room Status KPI */}
-        <Card className="card-3d group overflow-hidden border border-border/70 hover:border-primary/40 transition-all duration-300">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+        <TiltCard variant="kpi" className="group overflow-hidden border border-border/70 hover:border-primary/40">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 relative z-10">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Room Inventory (7 Total)
             </CardTitle>
@@ -129,7 +130,7 @@ export default function DashboardPage() {
               <Bed className="w-4 h-4" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             <div className="flex items-baseline justify-between">
               <div className="text-2xl font-bold">
                 {roomOverview.available}{" "}
@@ -157,11 +158,11 @@ export default function DashboardPage() {
               )}
             </div>
           </CardContent>
-        </Card>
+        </TiltCard>
 
         {/* Today's Operations KPI */}
-        <Card className="card-3d group overflow-hidden border border-border/70 hover:border-emerald-500/40 transition-all duration-300">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+        <TiltCard variant="kpi" className="group overflow-hidden border border-border/70 hover:border-emerald-500/40">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 relative z-10">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Today&apos;s Operations
             </CardTitle>
@@ -169,7 +170,7 @@ export default function DashboardPage() {
               <Users className="w-4 h-4" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             <div className="text-2xl font-bold">
               {todayOperations.currentGuestsHeadcount}{" "}
               <span className="text-xs font-normal text-muted-foreground">
@@ -182,11 +183,11 @@ export default function DashboardPage() {
               <span>{todayOperations.checkOuts} check-out today</span>
             </div>
           </CardContent>
-        </Card>
+        </TiltCard>
 
         {/* Month Revenue KPI */}
-        <Card className="card-3d group overflow-hidden border border-border/70 hover:border-emerald-500/40 transition-all duration-300">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+        <TiltCard variant="kpi" className="group overflow-hidden border border-border/70 hover:border-emerald-500/40">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 relative z-10">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Monthly Revenue
             </CardTitle>
@@ -194,7 +195,7 @@ export default function DashboardPage() {
               <DollarSign className="w-4 h-4" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
               {formatCurrency(financialOverview.monthlyRevenue)}
             </div>
@@ -203,11 +204,11 @@ export default function DashboardPage() {
               <span>Week: {formatCurrency(financialOverview.weeklyRevenue)}</span>
             </div>
           </CardContent>
-        </Card>
+        </TiltCard>
 
         {/* Net Operational Result KPI */}
-        <Card className="card-3d group overflow-hidden border border-border/70 hover:border-primary/40 transition-all duration-300">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+        <TiltCard variant="kpi" className="group overflow-hidden border border-border/70 hover:border-primary/40">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 relative z-10">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Net Result (This Month)
             </CardTitle>
@@ -219,7 +220,7 @@ export default function DashboardPage() {
               )}
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             <div
               className={`text-2xl font-bold ${
                 financialOverview.monthlyNetIncome >= 0
@@ -238,7 +239,7 @@ export default function DashboardPage() {
               )}
             </div>
           </CardContent>
-        </Card>
+        </TiltCard>
       </div>
 
       {/* Outstanding Balances Warning Banner (if any) */}
@@ -324,9 +325,9 @@ export default function DashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {currentGuests.map((guest: any) => (
-                    <tr key={guest.stayId} className="hover:bg-muted/30 transition-colors">
+                    <tr key={guest.stayId} className="table-row-hover hover:bg-muted/50 transition-all group">
                       <td className="px-3 py-3 font-semibold">
-                        <span className="px-2 py-1 bg-primary/10 text-primary rounded-md font-mono">
+                        <span className="px-2 py-1 bg-primary/10 text-primary rounded-md font-mono transition-transform group-hover:scale-105 inline-block">
                           {guest.roomNumber}
                         </span>
                         <span className="ml-1.5 text-xs text-muted-foreground">
@@ -364,12 +365,12 @@ export default function DashboardPage() {
                       <td className="px-3 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <Link href={`/stays/${guest.stayId}/bill`}>
-                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
+                            <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs hover:border-primary/50 hover:bg-primary/5 transition-all active:scale-95">
                               Live Bill
                             </Button>
                           </Link>
                           <Link href={`/stays/${guest.stayId}/checkout`}>
-                            <Button size="sm" className="h-7 px-2 text-xs bg-primary">
+                            <Button size="sm" className="h-7 px-2.5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs hover:shadow-md transition-all active:scale-95">
                               Checkout
                             </Button>
                           </Link>

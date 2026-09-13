@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatNepalDateTime } from "@/lib/utils";
 import { toast } from "sonner";
+import { TiltCard } from "@/components/ui/tilt-card";
 import {
   ManagePaymentQrModal,
   PaymentQrItem,
@@ -160,7 +161,7 @@ export default function PaymentQrPage() {
       </div>
 
       {/* Info Banner */}
-      <Card className="shadow-sm border-emerald-500/30 bg-emerald-50/30 dark:bg-emerald-950/20">
+      <Card className="shadow-sm border-emerald-500/30 bg-emerald-50/30 dark:bg-emerald-950/20 border-layered">
         <CardContent className="p-4 flex items-center gap-3 text-xs">
           <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0" />
           <div className="space-y-0.5">
@@ -197,8 +198,10 @@ export default function PaymentQrPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {qrs.map((qr) => (
-            <Card
+            <TiltCard
               key={qr.id}
+              variant="default"
+              maxTilt={3.5}
               className={`shadow-sm border-2 flex flex-col justify-between transition-all ${
                 qr.isDefault
                   ? "border-emerald-500/60 bg-emerald-50/10 dark:bg-emerald-950/10"
@@ -323,7 +326,7 @@ export default function PaymentQrPage() {
                   </Button>
                 </div>
               </CardFooter>
-            </Card>
+            </TiltCard>
           ))}
         </div>
       )}

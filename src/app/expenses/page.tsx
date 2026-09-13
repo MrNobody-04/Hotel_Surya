@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { formatCurrency, formatNepalDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { ExpenseCategory, ExpenseDTO, PaymentMethod } from "@/types";
+import { TiltCard } from "@/components/ui/tilt-card";
 
 const CATEGORIES: { label: string; value: ExpenseCategory }[] = [
   { label: "Staff Salary", value: "SALARY" },
@@ -253,7 +254,7 @@ export default function ExpensesPage() {
 
       {/* Summary KPI Banner */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-4 bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900">
+        <TiltCard variant="kpi" maxTilt={3.5} className="p-4 bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900">
           <div className="text-xs font-semibold text-rose-800 dark:text-rose-300 uppercase tracking-wider flex items-center justify-between">
             <span>Total Filtered Outflow</span>
             {periodFilter !== "ALL" && (
@@ -268,7 +269,7 @@ export default function ExpensesPage() {
           <p className="text-xs text-muted-foreground mt-1">
             Across {expenses.length} recorded expense transactions
           </p>
-        </Card>
+        </TiltCard>
       </div>
 
       {/* Filter Bar */}
@@ -341,7 +342,7 @@ export default function ExpensesPage() {
       </div>
 
       {/* Expenses Table */}
-      <Card className="shadow-sm">
+      <Card className="shadow-sm border-layered">
         <CardContent className="p-0">
           {loading ? (
             <div className="p-8 text-center text-xs text-muted-foreground">
@@ -371,7 +372,7 @@ export default function ExpensesPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {expenses.map((exp) => (
-                    <tr key={exp.id} className="hover:bg-muted/20 transition-colors">
+                    <tr key={exp.id} className="table-row-hover transition-colors">
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                         {formatNepalDate(exp.date)}
                       </td>

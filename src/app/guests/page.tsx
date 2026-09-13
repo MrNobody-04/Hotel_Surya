@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { StayDTO } from "@/types";
 import { PaymentQrModal } from "@/components/billing/payment-qr-modal";
 import { DeleteStayModal, DeleteStayTarget } from "@/components/stays/delete-stay-modal";
+import { TiltCard } from "@/components/ui/tilt-card";
 
 export default function CurrentGuestsPage() {
   const [stays, setStays] = useState<StayDTO[]>([]);
@@ -153,8 +154,10 @@ export default function CurrentGuestsPage() {
               };
 
               return (
-                <Card
+                <TiltCard
                   key={stay.id}
+                  variant="default"
+                  maxTilt={3.5}
                   className="shadow-sm border-2 border-border hover:border-primary/40 transition-all flex flex-col justify-between"
                 >
                   <CardHeader className="pb-3 border-b bg-muted/20">
@@ -277,7 +280,7 @@ export default function CurrentGuestsPage() {
                       </Button>
                     </Link>
                   </CardFooter>
-                </Card>
+                </TiltCard>
               );
             })}
           </div>

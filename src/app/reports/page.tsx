@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { TiltCard } from "@/components/ui/tilt-card";
 
 export default function ReportsPage() {
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -103,7 +104,7 @@ export default function ReportsPage() {
       {/* Export Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Customers Export */}
-        <Card className="shadow-sm border">
+        <TiltCard variant="default" maxTilt={3.5} className="shadow-sm border border-layered flex flex-col justify-between">
           <CardHeader>
             <div className="p-2.5 rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 w-fit mb-2">
               <Users className="w-5 h-5" />
@@ -124,10 +125,10 @@ export default function ReportsPage() {
               <span>{downloading === "customers" ? "Exporting..." : "Download Customers (CSV)"}</span>
             </Button>
           </CardFooter>
-        </Card>
+        </TiltCard>
 
         {/* Stays Export */}
-        <Card className="shadow-sm border">
+        <TiltCard variant="default" maxTilt={3.5} className="shadow-sm border border-layered flex flex-col justify-between">
           <CardHeader>
             <div className="p-2.5 rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 w-fit mb-2">
               <Bed className="w-5 h-5" />
@@ -148,10 +149,10 @@ export default function ReportsPage() {
               <span>{downloading === "stays" ? "Exporting..." : "Download Stays (CSV)"}</span>
             </Button>
           </CardFooter>
-        </Card>
+        </TiltCard>
 
         {/* Expenses Export */}
-        <Card className="shadow-sm border">
+        <TiltCard variant="default" maxTilt={3.5} className="shadow-sm border border-layered flex flex-col justify-between">
           <CardHeader>
             <div className="p-2.5 rounded-lg bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 w-fit mb-2">
               <Receipt className="w-5 h-5" />
@@ -172,7 +173,7 @@ export default function ReportsPage() {
               <span>{downloading === "expenses" ? "Exporting..." : "Download Expenses (CSV)"}</span>
             </Button>
           </CardFooter>
-        </Card>
+        </TiltCard>
       </div>
 
       {/* Hotel Surya Certified Reporting Notice */}

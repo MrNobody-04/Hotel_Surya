@@ -170,7 +170,7 @@ export default function StaffPage() {
       </div>
 
       {/* Staff Table Card */}
-      <Card className="shadow-sm border">
+      <Card className="shadow-sm border border-layered">
         <CardContent className="p-0">
           {loading ? (
             <div className="p-8 text-center text-xs text-muted-foreground">
@@ -195,7 +195,7 @@ export default function StaffPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {staff.map((member) => (
-                    <tr key={member.id} className="hover:bg-muted/20">
+                    <tr key={member.id} className="table-row-hover">
                       <td className="px-4 py-3 font-semibold text-foreground">
                         {member.name}
                       </td>

@@ -153,7 +153,7 @@ export default function StaysHistoryPage() {
       </div>
 
       {/* Table */}
-      <Card className="shadow-sm">
+      <Card className="shadow-sm border-layered">
         <CardContent className="p-0">
           {loading ? (
             <div className="p-8 text-center text-xs text-muted-foreground">
@@ -187,7 +187,7 @@ export default function StaysHistoryPage() {
                     const calc = stay.billCalculation;
 
                     return (
-                      <tr key={stay.id} className="hover:bg-muted/20 transition-colors">
+                      <tr key={stay.id} className="table-row-hover transition-colors">
                         <td className="px-4 py-3 font-mono text-xs font-semibold text-foreground">
                           #{stay.id.includes("-") ? stay.id : stay.id.slice(0, 8)}
                         </td>

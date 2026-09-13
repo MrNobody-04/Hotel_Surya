@@ -57,7 +57,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-3">
-          <div className="inline-flex rounded-2xl overflow-hidden shadow-xl shadow-amber-500/15 border border-amber-500/30 bg-slate-900 p-1">
+          <div className="inline-flex rounded-2xl overflow-hidden shadow-xl shadow-amber-500/15 border border-amber-500/30 bg-slate-900 p-1 transition-transform duration-300 hover:scale-105">
             <Image
               src="/images/logo.png"
               alt="NEW HOTEL SURYA"
@@ -78,7 +78,7 @@ export default function LoginPage() {
         </div>
 
         {/* Login Form Card */}
-        <Card className="shadow-xl border-border/80">
+        <Card className="shadow-xl border-border/80 border-layered card-3d">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-lg">Staff Sign In</CardTitle>
             <CardDescription>

@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCurrency, formatNepalDateTime, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { RoomDTO, RoomStatus, RoomType } from "@/types";
+import { TiltCard } from "@/components/ui/tilt-card";
 
 const ROOM_IMAGES: Record<string, string> = {
   "101": "/images/rooms/room-101.jpg",
@@ -304,8 +305,10 @@ export default function RoomsPage() {
             const isOccupied = room.status === "OCCUPIED" && room.currentStay;
 
             return (
-              <Card
+              <TiltCard
                 key={room.id}
+                variant="default"
+                maxTilt={3.5}
                 className={cn(
                   "card-3d group overflow-hidden flex flex-col border-2 transition-all duration-300 select-none",
                   room.status === "OCCUPIED"
@@ -450,7 +453,7 @@ export default function RoomsPage() {
                     </Link>
                   )}
                 </CardFooter>
-              </Card>
+              </TiltCard>
             );
           })}
         </div>
