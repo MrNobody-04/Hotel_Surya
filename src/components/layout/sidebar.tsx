@@ -133,7 +133,7 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
     <aside className="w-64 border-r bg-card flex flex-col h-full shrink-0 select-none">
       {/* NEW HOTEL SURYA Brand Header */}
       <div className="h-16 flex items-center gap-3 px-5 border-b bg-card">
-        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md shrink-0 border border-amber-500/30 bg-slate-900 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md shrink-0 border border-amber-500/30 bg-slate-900 flex items-center justify-center transition-transform duration-200 hover:scale-105">
           <Image
             src="/images/logo.png"
             alt="NEW HOTEL SURYA"
@@ -173,14 +173,22 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 active:scale-[0.98]",
+                      "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-180 active:scale-[0.98] group relative",
                       isActive
-                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30 font-semibold"
-                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground hover:translate-x-1"
+                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/25 font-semibold translate-x-0.5"
+                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground hover:translate-x-1.5"
                     )}
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
+                    <Icon
+                      className={cn(
+                        "w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110",
+                        isActive && "scale-105"
+                      )}
+                    />
                     <span>{item.label}</span>
+                    {isActive && (
+                      <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-foreground/90 shadow-xs" />
+                    )}
                   </Link>
                 );
               })}

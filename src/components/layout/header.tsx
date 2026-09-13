@@ -82,11 +82,11 @@ export function Header({ user, onMobileMenuToggle }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex items-center gap-3 border-b bg-background/95 px-4 md:px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-[env(safe-area-inset-top,0px)] h-[calc(3.5rem+env(safe-area-inset-top,0px))] transition-all">
+    <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-border/80 bg-background/80 px-4 md:px-6 backdrop-blur-md shadow-xs pt-[env(safe-area-inset-top,0px)] h-[calc(3.5rem+env(safe-area-inset-top,0px))] transition-all">
       <Button
         variant="ghost"
         size="icon"
-        className="md:hidden h-8 w-8 shrink-0"
+        className="md:hidden h-8 w-8 shrink-0 hover:scale-105 transition-transform"
         onClick={onMobileMenuToggle}
       >
         <Menu className="h-4 w-4" />
@@ -112,7 +112,8 @@ export function Header({ user, onMobileMenuToggle }: HeaderProps) {
 
       <div className="flex items-center gap-3">
         {/* Nepal Time Badge */}
-        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/60 text-muted-foreground text-xs font-mono">
+        <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full border border-border/60 bg-muted/40 hover:bg-muted/70 text-muted-foreground text-xs font-mono transition-colors shadow-xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <Clock className="w-3.5 h-3.5 text-primary" />
           <span>{nepalTime || "Loading Nepal Time..."}</span>
         </div>
@@ -123,8 +124,8 @@ export function Header({ user, onMobileMenuToggle }: HeaderProps) {
         {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8 border border-border">
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full hover:scale-105 transition-transform">
+                <Avatar className="h-8 w-8 border border-border shadow-xs">
                   <AvatarFallback className="text-xs bg-primary/10 text-primary font-bold">
                     {getInitials(user.name)}
                   </AvatarFallback>

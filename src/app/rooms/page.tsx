@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCurrency, formatNepalDateTime } from "@/lib/utils";
+import { formatCurrency, formatNepalDateTime, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { RoomDTO, RoomStatus, RoomType } from "@/types";
 
@@ -306,24 +306,25 @@ export default function RoomsPage() {
             return (
               <Card
                 key={room.id}
-                className={`shadow-sm border-2 transition-all overflow-hidden flex flex-col ${
+                className={cn(
+                  "card-3d group overflow-hidden flex flex-col border-2 transition-all duration-300 select-none",
                   room.status === "OCCUPIED"
-                    ? "border-blue-500/30 bg-blue-50/10 dark:bg-blue-950/10"
+                    ? "border-blue-500/40 bg-blue-50/10 dark:bg-blue-950/10 shadow-xs"
                     : room.status === "MAINTENANCE"
-                    ? "border-destructive/30 bg-destructive/5"
-                    : "border-border hover:border-primary/40"
-                }`}
+                    ? "border-destructive/40 bg-destructive/5 shadow-xs"
+                    : "border-border/80 hover:border-emerald-500/50 shadow-xs"
+                )}
               >
                 {/* Room Photo Banner */}
-                <div className="relative w-full h-44 sm:h-48 overflow-hidden bg-muted group">
+                <div className="relative w-full h-44 sm:h-48 overflow-hidden bg-muted">
                   <img
                     src={getRoomImageUrl(room.roomNumber, room.type)}
                     alt={`Room ${room.roomNumber}`}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
                     loading="lazy"
                   />
                   {/* Gradient Scrim */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30 pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/35 pointer-events-none" />
 
                   {/* Top Badges & Edit Button */}
                   <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
@@ -335,7 +336,7 @@ export default function RoomsPage() {
                       <Button
                         variant="secondary"
                         size="icon"
-                        className="h-7 w-7 rounded-full bg-background/80 hover:bg-background shadow-xs backdrop-blur-xs text-foreground"
+                        className="h-7 w-7 rounded-full bg-background/80 hover:bg-background shadow-xs backdrop-blur-xs text-foreground hover:scale-110 active:scale-95 transition-transform"
                         onClick={() => handleOpenEdit(room)}
                         title="Edit Room"
                       >
@@ -346,7 +347,7 @@ export default function RoomsPage() {
 
                   {/* Bottom Room Title & Description */}
                   <div className="absolute bottom-2.5 left-3 right-3 z-10 text-white">
-                    <div className="text-xl sm:text-2xl font-black font-mono tracking-tight drop-shadow-md">
+                    <div className="text-xl sm:text-2xl font-black font-mono tracking-tight drop-shadow-md transition-transform duration-200 group-hover:translate-x-0.5">
                       Room {room.roomNumber}
                     </div>
                     <p className="text-xs text-white/90 line-clamp-1 drop-shadow-sm font-medium">

@@ -825,37 +825,66 @@ export default function RestaurantPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                <Coffee className="w-4 h-4 text-purple-600" />
-                <span>Private Dining Cabins</span>
+                <Coffee className="w-4 h-4 text-amber-600 dark:text-amber-400 float-subtle" />
+                <span className="bg-gradient-to-r from-amber-700 via-amber-600 to-amber-800 dark:from-amber-300 dark:via-amber-400 dark:to-amber-200 bg-clip-text text-transparent font-extrabold">
+                  Private Dining Cabins
+                </span>
+                <Badge variant="purple" className="text-[10px] font-bold py-0 h-4 bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30">
+                  EXCLUSIVE
+                </Badge>
               </h2>
-              <span className="text-xs text-muted-foreground">{cabins.length} Private Cabins</span>
+              <span className="text-xs text-muted-foreground font-medium">{cabins.length} Private Cabins</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
               {cabins.map((table) => {
                 const isOccupied = table.status === "OCCUPIED" && table.activeOrder;
                 return (
                   <Card
                     key={table.id}
-                    className={`shadow-sm border-2 transition-all flex flex-col justify-between ${
+                    className={cn(
+                      "card-3d card-3d-cabin group relative overflow-hidden flex flex-col justify-between border-2 transition-all duration-300 select-none",
                       isOccupied
-                        ? "border-amber-500/60 bg-amber-500/5 hover:border-amber-500"
-                        : "border-border hover:border-primary/50"
-                    }`}
+                        ? "border-amber-500/70 bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-card"
+                        : "border-amber-500/25 bg-gradient-to-b from-amber-500/[0.03] to-card hover:border-amber-500/60"
+                    )}
                   >
+                    {/* Top Luxury Accent Strip */}
+                    <div
+                      className={cn(
+                        "h-1.5 w-full transition-all duration-300",
+                        isOccupied
+                          ? "bg-gradient-to-r from-amber-500 via-orange-400 to-amber-600 shadow-xs shadow-amber-500/50"
+                          : "bg-gradient-to-r from-amber-400/30 via-amber-500/20 to-amber-600/30 group-hover:from-amber-500 group-hover:to-amber-600"
+                      )}
+                    />
+
                     <CardHeader className="pb-3 border-b bg-muted/20">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-xl font-bold font-mono px-2.5 py-1 rounded-lg bg-primary/10 text-primary">
-                            {table.name}
+                          <span className="text-xl font-black font-mono px-3 py-1 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shadow-xs flex items-center gap-1.5 transition-transform duration-200 group-hover:scale-105">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                            <span>{table.name}</span>
                           </span>
-                          <Badge variant="purple" className="text-[10px]">
-                            CABIN
+                          <Badge variant="purple" className="text-[10px] font-bold tracking-wider bg-purple-600/10 text-purple-700 dark:text-purple-300 border border-purple-500/30 shadow-2xs">
+                            VIP CABIN
                           </Badge>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <Badge variant={isOccupied ? "warning" : "success"}>
-                            {isOccupied ? "OCCUPIED" : "AVAILABLE"}
+                          <Badge
+                            variant={isOccupied ? "warning" : "success"}
+                            className={cn(
+                              "gap-1 shadow-xs font-bold",
+                              isOccupied && "border border-amber-500/40 animate-pulse"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "w-1.5 h-1.5 rounded-full",
+                                isOccupied ? "bg-amber-500" : "bg-emerald-500"
+                              )}
+                            />
+                            <span>{isOccupied ? "OCCUPIED" : "AVAILABLE"}</span>
                           </Badge>
                           {!isOccupied && (
                             <Button
@@ -877,22 +906,23 @@ export default function RestaurantPage() {
 
                       {isOccupied ? (
                         <div className="mt-3 space-y-1">
-                          <div className="text-sm font-bold text-foreground">
+                          <div className="text-sm font-bold text-foreground truncate">
                             {table.activeOrder?.customerName}
                           </div>
                           <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <Users className="w-3 h-3" />
+                            <Users className="w-3 h-3 text-amber-600/70" />
                             <span>{table.activeOrder?.guestCount} Guest(s)</span>
                             <span>•</span>
-                            <Clock className="w-3 h-3" />
+                            <Clock className="w-3 h-3 text-amber-600/70" />
                             <span>
                               {formatNepalDateTime(table.activeOrder?.createdAt).split(", ")[1]}
                             </span>
                           </div>
                         </div>
                       ) : (
-                        <div className="mt-3 text-xs text-muted-foreground">
-                          Ready for guests • Capacity {table.capacity} people
+                        <div className="mt-3 text-xs text-muted-foreground flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80" />
+                          <span>Ready for guests • Capacity {table.capacity} people</span>
                         </div>
                       )}
                     </CardHeader>
@@ -906,16 +936,24 @@ export default function RestaurantPage() {
                               {table.activeOrder?.items.length || 0} item(s)
                             </span>
                           </div>
-                          <div className="p-2.5 bg-background border rounded-lg flex items-center justify-between">
-                            <span className="font-semibold text-xs">Current Bill:</span>
-                            <span className="font-mono text-base font-black text-foreground">
-                              {formatCurrency(table.activeOrder?.totalAmount || 0)}
-                            </span>
+                          <div className="p-3 bg-card/90 border border-amber-500/25 rounded-xl shadow-xs flex items-center justify-between transition-colors group-hover:border-amber-500/40">
+                            <div>
+                              <span className="text-[11px] font-medium text-muted-foreground block">Active Tab</span>
+                              <span className="text-xs font-semibold text-foreground">{table.activeOrder?.items.length || 0} dish(es)</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wider block font-semibold">Live Bill</span>
+                              <span className="font-mono text-base sm:text-lg font-black text-amber-600 dark:text-amber-400">
+                                {formatCurrency(table.activeOrder?.totalAmount || 0)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="py-4 text-center text-muted-foreground/70 italic text-xs">
-                          Table is vacant
+                        <div className="py-5 text-center flex flex-col items-center justify-center space-y-1 text-muted-foreground/80">
+                          <Coffee className="w-5 h-5 text-amber-500/50 float-subtle mb-1" />
+                          <span className="text-xs font-medium text-foreground/80">Private Luxury Space</span>
+                          <span className="text-[11px] text-muted-foreground">Exclusive dining • Up to {table.capacity} guests</span>
                         </div>
                       )}
                     </CardContent>
@@ -930,14 +968,14 @@ export default function RestaurantPage() {
                               setActiveBillTable(table);
                               setBillModalOpen(true);
                             }}
-                            className="w-full text-xs h-8"
+                            className="w-full text-xs h-9 font-semibold hover:border-amber-500/50 active:scale-[0.98] transition-all"
                           >
                             View Bill / Add
                           </Button>
                           <Button
                             size="sm"
                             onClick={() => handleOpenSettle(table)}
-                            className="w-full text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                            className="w-full text-xs h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm shadow-emerald-600/20 active:scale-[0.98] transition-all"
                           >
                             Settle Bill
                           </Button>
@@ -946,10 +984,10 @@ export default function RestaurantPage() {
                         <Button
                           size="sm"
                           onClick={() => handleOpenNewOrder(table)}
-                          className="w-full col-span-2 text-xs h-8 bg-primary gap-1"
+                          className="w-full col-span-2 text-xs h-9 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold gap-1.5 shadow-md shadow-amber-600/20 hover:shadow-lg hover:shadow-amber-600/30 active:scale-[0.98] transition-all"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          <span>Take Order</span>
+                          <span>Take Cabin Order</span>
                         </Button>
                       )}
                     </CardFooter>
@@ -963,37 +1001,66 @@ export default function RestaurantPage() {
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-600" />
-                <span>Main Dining Halls</span>
+                <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 float-subtle" />
+                <span className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 dark:from-blue-300 dark:via-blue-400 dark:to-indigo-300 bg-clip-text text-transparent font-extrabold">
+                  Main Dining Halls
+                </span>
+                <Badge variant="info" className="text-[10px] font-bold py-0 h-4 bg-blue-600/10 text-blue-700 dark:text-blue-300 border-blue-500/30">
+                  SPACIOUS
+                </Badge>
               </h2>
-              <span className="text-xs text-muted-foreground">{halls.length} Dining Halls</span>
+              <span className="text-xs text-muted-foreground font-medium">{halls.length} Dining Halls</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
               {halls.map((table) => {
                 const isOccupied = table.status === "OCCUPIED" && table.activeOrder;
                 return (
                   <Card
                     key={table.id}
-                    className={`shadow-sm border-2 transition-all flex flex-col justify-between ${
+                    className={cn(
+                      "card-3d card-3d-hall group relative overflow-hidden flex flex-col justify-between border-2 transition-all duration-300 select-none",
                       isOccupied
-                        ? "border-amber-500/60 bg-amber-500/5 hover:border-amber-500"
-                        : "border-border hover:border-primary/50"
-                    }`}
+                        ? "border-blue-500/70 bg-gradient-to-b from-blue-500/10 via-blue-500/5 to-card"
+                        : "border-blue-500/25 bg-gradient-to-b from-blue-500/[0.03] to-card hover:border-blue-500/60"
+                    )}
                   >
+                    {/* Top Modern Accent Strip */}
+                    <div
+                      className={cn(
+                        "h-1.5 w-full transition-all duration-300",
+                        isOccupied
+                          ? "bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-600 shadow-xs shadow-blue-500/50"
+                          : "bg-gradient-to-r from-blue-400/30 via-blue-500/20 to-blue-600/30 group-hover:from-blue-500 group-hover:to-blue-600"
+                      )}
+                    />
+
                     <CardHeader className="pb-3 border-b bg-muted/20">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-xl font-bold font-mono px-2.5 py-1 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400">
-                            {table.name}
+                          <span className="text-xl font-black font-mono px-3 py-1 rounded-lg bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 shadow-xs flex items-center gap-1.5 transition-transform duration-200 group-hover:scale-105">
+                            <Users className="w-3.5 h-3.5 text-blue-500" />
+                            <span>{table.name}</span>
                           </span>
-                          <Badge variant="info" className="text-[10px]">
-                            HALL
+                          <Badge variant="info" className="text-[10px] font-bold tracking-wider bg-blue-600/10 text-blue-700 dark:text-blue-300 border border-blue-500/30 shadow-2xs">
+                            MAIN HALL
                           </Badge>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <Badge variant={isOccupied ? "warning" : "success"}>
-                            {isOccupied ? "OCCUPIED" : "AVAILABLE"}
+                          <Badge
+                            variant={isOccupied ? "warning" : "success"}
+                            className={cn(
+                              "gap-1 shadow-xs font-bold",
+                              isOccupied && "border border-amber-500/40 animate-pulse"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "w-1.5 h-1.5 rounded-full",
+                                isOccupied ? "bg-amber-500" : "bg-emerald-500"
+                              )}
+                            />
+                            <span>{isOccupied ? "OCCUPIED" : "AVAILABLE"}</span>
                           </Badge>
                           {!isOccupied && (
                             <Button
@@ -1015,22 +1082,23 @@ export default function RestaurantPage() {
 
                       {isOccupied ? (
                         <div className="mt-3 space-y-1">
-                          <div className="text-sm font-bold text-foreground">
+                          <div className="text-sm font-bold text-foreground truncate">
                             {table.activeOrder?.customerName}
                           </div>
                           <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <Users className="w-3 h-3" />
+                            <Users className="w-3 h-3 text-blue-600/70" />
                             <span>{table.activeOrder?.guestCount} Guest(s)</span>
                             <span>•</span>
-                            <Clock className="w-3 h-3" />
+                            <Clock className="w-3 h-3 text-blue-600/70" />
                             <span>
                               {formatNepalDateTime(table.activeOrder?.createdAt).split(", ")[1]}
                             </span>
                           </div>
                         </div>
                       ) : (
-                        <div className="mt-3 text-xs text-muted-foreground">
-                          Ready for guests • Capacity {table.capacity} people
+                        <div className="mt-3 text-xs text-muted-foreground flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80" />
+                          <span>Open for seating • Capacity {table.capacity} people</span>
                         </div>
                       )}
                     </CardHeader>
@@ -1044,16 +1112,24 @@ export default function RestaurantPage() {
                               {table.activeOrder?.items.length || 0} item(s)
                             </span>
                           </div>
-                          <div className="p-2.5 bg-background border rounded-lg flex items-center justify-between">
-                            <span className="font-semibold text-xs">Current Bill:</span>
-                            <span className="font-mono text-base font-black text-foreground">
-                              {formatCurrency(table.activeOrder?.totalAmount || 0)}
-                            </span>
+                          <div className="p-3 bg-card/90 border border-blue-500/25 rounded-xl shadow-xs flex items-center justify-between transition-colors group-hover:border-blue-500/40">
+                            <div>
+                              <span className="text-[11px] font-medium text-muted-foreground block">Active Tab</span>
+                              <span className="text-xs font-semibold text-foreground">{table.activeOrder?.items.length || 0} dish(es)</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider block font-semibold">Live Bill</span>
+                              <span className="font-mono text-base sm:text-lg font-black text-blue-600 dark:text-blue-400">
+                                {formatCurrency(table.activeOrder?.totalAmount || 0)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="py-4 text-center text-muted-foreground/70 italic text-xs">
-                          Table is vacant
+                        <div className="py-5 text-center flex flex-col items-center justify-center space-y-1 text-muted-foreground/80">
+                          <Users className="w-5 h-5 text-blue-500/50 float-subtle mb-1" />
+                          <span className="text-xs font-medium text-foreground/80">Social Dining Hall</span>
+                          <span className="text-[11px] text-muted-foreground">Spacious communal seating • Up to {table.capacity} guests</span>
                         </div>
                       )}
                     </CardContent>
@@ -1068,14 +1144,14 @@ export default function RestaurantPage() {
                               setActiveBillTable(table);
                               setBillModalOpen(true);
                             }}
-                            className="w-full text-xs h-8"
+                            className="w-full text-xs h-9 font-semibold hover:border-blue-500/50 active:scale-[0.98] transition-all"
                           >
                             View Bill / Add
                           </Button>
                           <Button
                             size="sm"
                             onClick={() => handleOpenSettle(table)}
-                            className="w-full text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                            className="w-full text-xs h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm shadow-emerald-600/20 active:scale-[0.98] transition-all"
                           >
                             Settle Bill
                           </Button>
@@ -1084,10 +1160,10 @@ export default function RestaurantPage() {
                         <Button
                           size="sm"
                           onClick={() => handleOpenNewOrder(table)}
-                          className="w-full col-span-2 text-xs h-8 bg-primary gap-1"
+                          className="w-full col-span-2 text-xs h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-1.5 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] transition-all"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          <span>Take Order</span>
+                          <span>Take Hall Order</span>
                         </Button>
                       )}
                     </CardFooter>
@@ -1510,10 +1586,10 @@ export default function RestaurantPage() {
                         <div
                           key={item.id}
                           className={cn(
-                            "flex items-center justify-between p-2 sm:p-2.5 rounded-lg border transition-all text-xs",
+                            "flex items-center justify-between p-2 sm:p-2.5 rounded-lg border transition-all duration-150 text-xs",
                             qtyInTray > 0
-                              ? "border-primary/50 bg-primary/5 shadow-xs"
-                              : "hover:bg-muted/30"
+                              ? "border-primary/60 bg-primary/10 shadow-xs"
+                              : "hover:bg-muted/40 hover:border-primary/30 hover:translate-x-0.5"
                           )}
                         >
                           <div className="flex-1 min-w-0 pr-2">
@@ -1533,7 +1609,7 @@ export default function RestaurantPage() {
                                   size="icon"
                                   variant="ghost"
                                   onClick={() => handleUpdateTrayQty(item.name, -1)}
-                                  className="h-7 w-7 text-xs font-bold hover:bg-destructive/10 hover:text-destructive"
+                                  className="h-7 w-7 text-xs font-bold hover:bg-destructive/10 hover:text-destructive active:scale-90 transition-transform"
                                 >
                                   -
                                 </Button>
@@ -1545,7 +1621,7 @@ export default function RestaurantPage() {
                                   size="icon"
                                   variant="ghost"
                                   onClick={() => handleUpdateTrayQty(item.name, 1)}
-                                  className="h-7 w-7 text-xs font-bold hover:bg-primary/10 hover:text-primary"
+                                  className="h-7 w-7 text-xs font-bold hover:bg-primary/10 hover:text-primary active:scale-90 transition-transform"
                                 >
                                   +
                                 </Button>
@@ -1556,7 +1632,7 @@ export default function RestaurantPage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleAddItemToTray(item)}
-                                className="h-7 text-xs px-2.5 gap-1 hover:border-primary hover:text-primary font-medium"
+                                className="h-7 text-xs px-2.5 gap-1 hover:border-primary hover:bg-primary hover:text-primary-foreground font-semibold active:scale-95 transition-all shadow-2xs"
                               >
                                 <Plus className="w-3 h-3" />
                                 <span>Add</span>

@@ -120,12 +120,14 @@ export default function DashboardPage() {
       {/* Primary KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Room Status KPI */}
-        <Card className="shadow-sm">
+        <Card className="card-3d group overflow-hidden border border-border/70 hover:border-primary/40 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Room Inventory (7 Total)
             </CardTitle>
-            <Bed className="w-4 h-4 text-blue-600" />
+            <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3">
+              <Bed className="w-4 h-4" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline justify-between">
@@ -158,12 +160,14 @@ export default function DashboardPage() {
         </Card>
 
         {/* Today's Operations KPI */}
-        <Card className="shadow-sm">
+        <Card className="card-3d group overflow-hidden border border-border/70 hover:border-emerald-500/40 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Today&apos;s Operations
             </CardTitle>
-            <Users className="w-4 h-4 text-emerald-600" />
+            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3">
+              <Users className="w-4 h-4" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -181,12 +185,14 @@ export default function DashboardPage() {
         </Card>
 
         {/* Month Revenue KPI */}
-        <Card className="shadow-sm">
+        <Card className="card-3d group overflow-hidden border border-border/70 hover:border-emerald-500/40 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Monthly Revenue
             </CardTitle>
-            <DollarSign className="w-4 h-4 text-emerald-600" />
+            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3">
+              <DollarSign className="w-4 h-4" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
@@ -200,16 +206,18 @@ export default function DashboardPage() {
         </Card>
 
         {/* Net Operational Result KPI */}
-        <Card className="shadow-sm">
+        <Card className="card-3d group overflow-hidden border border-border/70 hover:border-primary/40 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Net Result (This Month)
             </CardTitle>
-            {financialOverview.monthlyNetIncome >= 0 ? (
-              <TrendingUp className="w-4 h-4 text-emerald-600" />
-            ) : (
-              <TrendingDown className="w-4 h-4 text-rose-600" />
-            )}
+            <div className="p-1.5 rounded-lg bg-primary/10 text-primary transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3">
+              {financialOverview.monthlyNetIncome >= 0 ? (
+                <TrendingUp className="w-4 h-4 text-emerald-600" />
+              ) : (
+                <TrendingDown className="w-4 h-4 text-rose-600" />
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div
