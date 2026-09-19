@@ -33,10 +33,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showQrModal, setShowQrModal] = useState(false);
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = async (forceFresh = false) => {
     try {
       setLoading(true);
-      const res = await fetch("/api/analytics?mode=dashboard");
+      const res = await fetch(`/api/analytics?mode=dashboard${forceFresh ? "&fresh=1" : ""}`);
       if (res.ok) {
         const json = await res.json();
         setData(json);
@@ -51,7 +51,7 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    fetchDashboard();
+    fetchDashboard(false);
   }, []);
 
   if (loading && !data) {
@@ -102,7 +102,7 @@ export default function DashboardPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={fetchDashboard}
+            onClick={() => fetchDashboard(true)}
             disabled={loading}
             className="h-9 gap-1.5"
           >

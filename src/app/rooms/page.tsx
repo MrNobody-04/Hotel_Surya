@@ -323,8 +323,11 @@ export default function RoomsPage() {
                   <img
                     src={getRoomImageUrl(room.roomNumber, room.type)}
                     alt={`Room ${room.roomNumber}`}
-                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
+                    width={800}
+                    height={446}
+                    className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                     loading="lazy"
+                    decoding="async"
                   />
                   {/* Gradient Scrim */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/35 pointer-events-none" />

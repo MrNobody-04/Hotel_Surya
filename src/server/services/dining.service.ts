@@ -2,6 +2,7 @@ import prisma from "@/lib/db";
 import { BillItemCategory, PaymentMethod } from "@/types";
 import { logAuditEvent } from "./audit.service";
 import { getNepalDateRange, TimePeriod } from "@/lib/utils";
+import { invalidateDashboardMetricsCache } from "./analytics.service";
 
 export interface DiningOrderItemInput {
   name: string;
@@ -428,6 +429,8 @@ export async function settleDiningOrder(
         method: payment.method,
       },
     });
+
+    invalidateDashboardMetricsCache();
 
     return settled;
   });

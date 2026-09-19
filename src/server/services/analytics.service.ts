@@ -1,7 +1,24 @@
 import prisma from "@/lib/db";
 import { calculateStayBill } from "./billing.service";
 
-export async function getDashboardMetrics() {
+interface DashboardCacheEntry {
+  data: any;
+  cachedAt: number;
+}
+
+let dashboardCache: DashboardCacheEntry | null = null;
+const DASHBOARD_CACHE_TTL_MS = 25 * 1000; // 25 seconds TTL for instant tab-switching
+
+export function invalidateDashboardMetricsCache() {
+  dashboardCache = null;
+}
+
+export async function getDashboardMetrics(forceFresh: boolean = false) {
+  const nowMs = Date.now();
+  if (!forceFresh && dashboardCache && nowMs - dashboardCache.cachedAt < DASHBOARD_CACHE_TTL_MS) {
+    return dashboardCache.data;
+  }
+
   const now = new Date();
 
   // Create start of day in local Nepal timezone representation
@@ -164,7 +181,7 @@ export async function getDashboardMetrics() {
   const currentOccupancyRate =
     totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
-  return {
+  const result = {
     roomOverview: {
       total: totalRooms,
       available: availableRooms,
@@ -196,6 +213,13 @@ export async function getDashboardMetrics() {
     },
     currentGuests: currentGuestsList,
   };
+
+  dashboardCache = {
+    data: result,
+    cachedAt: Date.now(),
+  };
+
+  return result;
 }
 
 export async function getDetailedAnalytics(startDate?: Date, endDate?: Date) {

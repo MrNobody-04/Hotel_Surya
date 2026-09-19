@@ -1,6 +1,7 @@
 import prisma from "@/lib/db";
 import { ExpenseCategory, PaymentMethod } from "@/types";
 import { logAuditEvent } from "./audit.service";
+import { invalidateDashboardMetricsCache } from "./analytics.service";
 
 export interface CreateExpenseInput {
   title: string;
@@ -46,6 +47,8 @@ export async function createExpense(input: CreateExpenseInput) {
       category: expense.category,
     },
   });
+
+  invalidateDashboardMetricsCache();
 
   return expense;
 }
@@ -105,6 +108,8 @@ export async function deleteExpense(id: string, userId: string, userName: string
     entityId: id,
     metadata: { title: expense.title, amount: expense.amount },
   });
+
+  invalidateDashboardMetricsCache();
 
   return { success: true };
 }

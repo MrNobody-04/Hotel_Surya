@@ -8,6 +8,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const mode = searchParams.get("mode") || "dashboard";
+    const fresh = searchParams.get("fresh") === "1" || searchParams.get("fresh") === "true";
     const startDate = searchParams.get("startDate") ? new Date(searchParams.get("startDate")!) : undefined;
     const endDate = searchParams.get("endDate") ? new Date(searchParams.get("endDate")!) : undefined;
 
@@ -15,8 +16,12 @@ export async function GET(request: Request) {
       const detailed = await getDetailedAnalytics(startDate, endDate);
       return NextResponse.json(detailed);
     } else {
-      const dashboard = await getDashboardMetrics();
-      return NextResponse.json(dashboard);
+      const dashboard = await getDashboardMetrics(fresh);
+      return NextResponse.json(dashboard, {
+        headers: {
+          "Cache-Control": "private, max-age=15, stale-while-revalidate=30",
+        },
+      });
     }
   } catch (error: any) {
     return NextResponse.json(

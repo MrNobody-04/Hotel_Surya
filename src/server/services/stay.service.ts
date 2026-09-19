@@ -2,6 +2,7 @@ import prisma from "@/lib/db";
 import { Gender, PaymentMethod, BillItemCategory, StayStatus } from "@/types";
 import { calculateStayBill } from "./billing.service";
 import { logAuditEvent } from "./audit.service";
+import { invalidateDashboardMetricsCache } from "./analytics.service";
 
 export interface CheckInInput {
   customerId?: string;
@@ -188,6 +189,8 @@ export async function checkIn(input: CheckInInput) {
     },
   });
 
+  invalidateDashboardMetricsCache();
+
   return result.stay;
 }
 
@@ -240,6 +243,8 @@ export async function addBillItem(input: {
       total,
     },
   });
+
+  invalidateDashboardMetricsCache();
 
   return item;
 }
@@ -308,6 +313,8 @@ export async function updateBillItem(input: {
     },
   });
 
+  invalidateDashboardMetricsCache();
+
   return updatedItem;
 }
 
@@ -351,6 +358,8 @@ export async function removeBillItem(input: {
       total: item.total,
     },
   });
+
+  invalidateDashboardMetricsCache();
 
   return { success: true };
 }
@@ -408,6 +417,8 @@ export async function updateStayRoomPrice(input: {
       notes: input.notes || null,
     },
   });
+
+  invalidateDashboardMetricsCache();
 
   return {
     ...updatedStay,
@@ -471,6 +482,8 @@ export async function addPayment(input: {
       method: input.method,
     },
   });
+
+  invalidateDashboardMetricsCache();
 
   return payment;
 }
@@ -585,6 +598,8 @@ export async function checkOut(input: {
       checkoutAt: result.checkoutAt.toISOString(),
     },
   });
+
+  invalidateDashboardMetricsCache();
 
   return {
     stay: result.stay,
