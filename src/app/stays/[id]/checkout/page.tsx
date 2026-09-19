@@ -16,10 +16,12 @@ import {
   ShieldAlert,
   QrCode,
   Copy,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -49,6 +51,12 @@ export default function CheckoutPage({
   // Admin override state
   const [showOverride, setShowOverride] = useState(false);
   const [overrideReason, setOverrideReason] = useState("");
+
+  // Room rate adjustment state
+  const [editRoomRateModalOpen, setEditRoomRateModalOpen] = useState(false);
+  const [editRoomRateValue, setEditRoomRateValue] = useState("");
+  const [editRoomRateNotes, setEditRoomRateNotes] = useState("");
+  const [updatingRoomRate, setUpdatingRoomRate] = useState(false);
 
   const [completing, setCompleting] = useState(false);
 
@@ -119,6 +127,38 @@ export default function CheckoutPage({
       toast.error(err.message);
     } finally {
       setCompleting(false);
+    }
+  };
+
+  const handleUpdateRoomRate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const rateNum = Number(editRoomRateValue);
+    if (isNaN(rateNum) || rateNum < 0) {
+      toast.error("Please enter a valid room rate (Rs. 0 or greater)");
+      return;
+    }
+
+    setUpdatingRoomRate(true);
+    try {
+      const res = await fetch(`/api/stays/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomPrice: rateNum,
+          notes: editRoomRateNotes || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update room price");
+
+      toast.success(`Room rate updated to ${formatCurrency(rateNum)}`);
+      setEditRoomRateModalOpen(false);
+      fetchStay();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setUpdatingRoomRate(false);
     }
   };
 
@@ -238,8 +278,25 @@ export default function CheckoutPage({
           {/* Final Financial Breakdown */}
           <div className="p-4 bg-muted/30 border rounded-xl space-y-2.5 text-sm border-layered shadow-xs">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span>Room Charge:</span>
-              <span className="font-mono">{formatCurrency(calc.roomCharge)}</span>
+              <span className="flex items-center gap-1.5">
+                <span>Room Charge:</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditRoomRateValue(String(stay.roomPrice));
+                    setEditRoomRateNotes("");
+                    setEditRoomRateModalOpen(true);
+                  }}
+                  className="h-5 px-1.5 text-xs text-primary hover:bg-primary/10 gap-1 font-semibold"
+                  title="Adjust room rate if entered incorrectly at check-in"
+                >
+                  <Pencil className="w-3 h-3" />
+                  <span>Adjust</span>
+                </Button>
+              </span>
+              <span className="font-mono font-medium text-foreground">{formatCurrency(calc.roomCharge)}</span>
             </div>
             {calc.foodTotal > 0 && (
               <div className="flex items-center justify-between text-muted-foreground">
@@ -444,6 +501,81 @@ export default function CheckoutPage({
         roomNumber={stay?.room?.roomNumber}
         guestName={stay?.customer?.fullName}
       />
+
+      {/* Adjust Room Rate Modal */}
+      {stay && (
+        <Dialog open={editRoomRateModalOpen} onOpenChange={setEditRoomRateModalOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-primary">
+                <Pencil className="w-5 h-5" />
+                <span>Adjust Room Rate Before Checkout</span>
+              </DialogTitle>
+              <DialogDescription>
+                Correct the negotiated stay rate for Room {stay.room.roomNumber} ({stay.room.type}).
+                This will recalculate the final balance immediately.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleUpdateRoomRate} className="space-y-4 pt-2">
+              <div className="p-3 bg-muted/40 rounded-lg border text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Current Rate:</span>
+                  <span className="font-mono font-bold text-foreground">{formatCurrency(stay.roomPrice)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Guest:</span>
+                  <span className="font-medium text-foreground">{stay.customer.fullName}</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="checkoutRoomPriceInput">Adjusted Room Rate (Rs.) *</Label>
+                <Input
+                  id="checkoutRoomPriceInput"
+                  type="number"
+                  min="0"
+                  step="any"
+                  required
+                  value={editRoomRateValue}
+                  onChange={(e) => setEditRoomRateValue(e.target.value)}
+                  placeholder="e.g. 1200"
+                  className="font-mono text-base"
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="checkoutRoomRateNotes">Reason for Adjustment (Optional)</Label>
+                <Input
+                  id="checkoutRoomRateNotes"
+                  value={editRoomRateNotes}
+                  onChange={(e) => setEditRoomRateNotes(e.target.value)}
+                  placeholder="e.g. Correcting rate before checkout settlement"
+                />
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditRoomRateModalOpen(false)}
+                  disabled={updatingRoomRate}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updatingRoomRate}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                >
+                  {updatingRoomRate ? "Updating..." : "Update Rate & Recalculate"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

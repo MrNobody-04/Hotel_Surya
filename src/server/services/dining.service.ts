@@ -277,6 +277,97 @@ export async function removeDiningOrderItem(
   });
 }
 
+export async function updateDiningOrderItem(
+  orderId: string,
+  itemId: string,
+  data: {
+    unitPrice?: number;
+    quantity?: number;
+    name?: string;
+    notes?: string | null;
+  },
+  userId: string,
+  userName: string
+) {
+  return await prisma.$transaction(async (tx) => {
+    const item = await tx.diningOrderItem.findUnique({
+      where: { id: itemId },
+    });
+
+    if (!item || item.orderId !== orderId) {
+      throw new Error("Order item not found");
+    }
+
+    const order = await tx.diningOrder.findUnique({
+      where: { id: orderId },
+      include: { table: true },
+    });
+
+    if (!order) {
+      throw new Error("Dining order not found");
+    }
+
+    if (order.status !== "ACTIVE") {
+      throw new Error(`Cannot update items on a ${order.status.toLowerCase()} order`);
+    }
+
+    const oldPrice = item.unitPrice;
+    const oldQuantity = item.quantity;
+    const oldTotal = item.total;
+
+    const unitPrice = data.unitPrice !== undefined ? Math.max(0, Number(data.unitPrice)) : item.unitPrice;
+    const quantity = data.quantity !== undefined ? Math.max(1, parseInt(String(data.quantity)) || 1) : item.quantity;
+    const total = Math.round((quantity * unitPrice + Number.EPSILON) * 100) / 100;
+    const name = data.name ? data.name.trim() : item.name;
+    const notes = data.notes !== undefined ? (data.notes?.trim() || null) : item.notes;
+
+    const updatedItem = await tx.diningOrderItem.update({
+      where: { id: itemId },
+      data: {
+        name,
+        quantity,
+        unitPrice,
+        total,
+        notes,
+      },
+    });
+
+    // Recalculate order total
+    const remaining = await tx.diningOrderItem.findMany({
+      where: { orderId },
+    });
+    const newTotal = remaining.reduce((sum, it) => sum + it.total, 0);
+
+    const updatedOrder = await tx.diningOrder.update({
+      where: { id: orderId },
+      data: { totalAmount: newTotal },
+      include: { table: true, items: true },
+    });
+
+    await logAuditEvent({
+      userId,
+      userName,
+      action: "UPDATE_ORDER_ITEM",
+      entity: "DINING_ORDER",
+      entityId: orderId,
+      metadata: {
+        itemId: item.id,
+        itemName: updatedItem.name,
+        oldPrice,
+        newPrice: unitPrice,
+        oldQuantity,
+        newQuantity: quantity,
+        oldTotal,
+        newTotal: total,
+        newOrderTotal: newTotal,
+        tableName: updatedOrder.table?.name,
+      },
+    });
+
+    return updatedOrder;
+  });
+}
+
 export async function settleDiningOrder(
   orderId: string,
   payment: {

@@ -3,6 +3,7 @@ import { requireAuth } from "@/server/auth/rbac";
 import {
   addItemsToDiningOrder,
   removeDiningOrderItem,
+  updateDiningOrderItem,
 } from "@/server/services/dining.service";
 
 export async function POST(
@@ -48,6 +49,36 @@ export async function DELETE(
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Failed to remove item" },
+      { status: 400 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireAuth();
+    const { id } = await params;
+    const body = await request.json();
+
+    const { itemId, unitPrice, quantity, name, notes } = body;
+    if (!itemId) {
+      return NextResponse.json({ error: "Item ID is required" }, { status: 400 });
+    }
+
+    const updated = await updateDiningOrderItem(
+      id,
+      itemId,
+      { unitPrice, quantity, name, notes },
+      user.id,
+      user.name
+    );
+    return NextResponse.json({ success: true, order: updated });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Failed to update order item" },
       { status: 400 }
     );
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/server/auth/rbac";
-import { getStayById, deleteStay } from "@/server/services/stay.service";
+import { getStayById, deleteStay, updateStayRoomPrice } from "@/server/services/stay.service";
 
 export async function GET(
   request: Request,
@@ -24,6 +24,39 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireAuth();
+    const { id } = await params;
+    const body = await request.json();
+
+    if (body.roomPrice === undefined) {
+      return NextResponse.json(
+        { error: "roomPrice is required" },
+        { status: 400 }
+      );
+    }
+
+    const updatedStay = await updateStayRoomPrice({
+      stayId: id,
+      roomPrice: Number(body.roomPrice),
+      notes: body.notes,
+      userId: user.id,
+      userName: user.name,
+    });
+
+    return NextResponse.json({ success: true, stay: updatedStay });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Failed to update room price" },
+      { status: error.statusCode || 400 }
+    );
+  }
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -43,3 +76,4 @@ export async function DELETE(
     );
   }
 }
+

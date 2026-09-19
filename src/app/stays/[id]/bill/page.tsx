@@ -23,6 +23,9 @@ import {
   QrCode,
   Plus,
   Trash2,
+  Pencil,
+  Percent,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -73,6 +76,23 @@ export default function StayBillPage({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
   const [paymentNotes, setPaymentNotes] = useState("");
   const [recordingPayment, setRecordingPayment] = useState(false);
+
+  // Edit Room Rate Modal
+  const [editRoomRateModalOpen, setEditRoomRateModalOpen] = useState(false);
+  const [editRoomRateValue, setEditRoomRateValue] = useState("");
+  const [editRoomRateNotes, setEditRoomRateNotes] = useState("");
+  const [updatingRoomRate, setUpdatingRoomRate] = useState(false);
+
+  // Edit Bill Item Modal
+  const [editItemModalOpen, setEditItemModalOpen] = useState(false);
+  const [selectedItemForEdit, setSelectedItemForEdit] = useState<any>(null);
+  const [editItemName, setEditItemName] = useState("");
+  const [editItemPrice, setEditItemPrice] = useState("");
+  const [editItemQty, setEditItemQty] = useState("1");
+  const [editItemDiscount, setEditItemDiscount] = useState("");
+  const [editItemNotes, setEditItemNotes] = useState("");
+  const [updatingItem, setUpdatingItem] = useState(false);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   const fetchStay = async () => {
     try {
@@ -259,6 +279,118 @@ export default function StayBillPage({
       toast.error(err.message);
     } finally {
       setRecordingPayment(false);
+    }
+  };
+
+  // Edit Room Rate Handler
+  const handleUpdateRoomRate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const rateNum = Number(editRoomRateValue);
+    if (isNaN(rateNum) || rateNum < 0) {
+      toast.error("Please enter a valid room rate (Rs. 0 or greater)");
+      return;
+    }
+
+    setUpdatingRoomRate(true);
+    try {
+      const res = await fetch(`/api/stays/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomPrice: rateNum,
+          notes: editRoomRateNotes || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update room price");
+
+      toast.success(`Room rate updated to ${formatCurrency(rateNum)}`);
+      setEditRoomRateModalOpen(false);
+      fetchStay();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setUpdatingRoomRate(false);
+    }
+  };
+
+  // Open Edit Item Modal
+  const handleOpenEditItem = (item: any) => {
+    setSelectedItemForEdit(item);
+    setEditItemName(item.name);
+    setEditItemPrice(String(item.unitPrice));
+    setEditItemQty(String(item.quantity));
+    setEditItemDiscount("");
+    setEditItemNotes(item.notes || "");
+    setEditItemModalOpen(true);
+  };
+
+  // Update Bill Item Handler
+  const handleUpdateItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedItemForEdit) return;
+
+    const priceNum = Number(editItemPrice);
+    const qtyNum = Number(editItemQty);
+
+    if (isNaN(priceNum) || priceNum < 0) {
+      toast.error("Please enter a valid unit price");
+      return;
+    }
+    if (isNaN(qtyNum) || qtyNum < 1) {
+      toast.error("Quantity must be at least 1");
+      return;
+    }
+
+    setUpdatingItem(true);
+    try {
+      const res = await fetch(`/api/stays/${id}/items`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemId: selectedItemForEdit.id,
+          name: editItemName.trim() || selectedItemForEdit.name,
+          unitPrice: priceNum,
+          quantity: qtyNum,
+          notes: editItemNotes || null,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update item");
+
+      toast.success(`Updated "${editItemName || selectedItemForEdit.name}"`);
+      setEditItemModalOpen(false);
+      fetchStay();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setUpdatingItem(false);
+    }
+  };
+
+  // Delete Bill Item Handler
+  const handleDeleteBillItem = async (itemId: string, itemName: string) => {
+    if (!confirm(`Are you sure you want to remove "${itemName}" from this bill?`)) {
+      return;
+    }
+
+    setDeletingItemId(itemId);
+    try {
+      const res = await fetch(`/api/stays/${id}/items?itemId=${itemId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to remove item");
+
+      toast.success(`Removed "${itemName}" from bill`);
+      fetchStay();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setDeletingItemId(null);
     }
   };
 
@@ -471,6 +603,9 @@ export default function StayBillPage({
                     <th className="px-3 py-2.5 text-center">Qty</th>
                     <th className="px-3 py-2.5 text-right">Unit Price</th>
                     <th className="px-3 py-2.5 text-right">Total</th>
+                    {stay.status === "ACTIVE" && (
+                      <th className="px-3 py-2.5 text-center no-print">Actions</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -489,6 +624,25 @@ export default function StayBillPage({
                     <td className="px-3 py-2.5 text-right font-mono font-bold">
                       {formatCurrency(stay.roomPrice)}
                     </td>
+                    {stay.status === "ACTIVE" && (
+                      <td className="px-3 py-2.5 text-center no-print">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditRoomRateValue(String(stay.roomPrice));
+                            setEditRoomRateNotes("");
+                            setEditRoomRateModalOpen(true);
+                          }}
+                          className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
+                          title="Edit Room Rate"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit Rate</span>
+                        </Button>
+                      </td>
+                    )}
                   </tr>
 
                   {/* F&B and Other Bill Items */}
@@ -523,6 +677,37 @@ export default function StayBillPage({
                       <td className="px-3 py-2.5 text-right font-mono font-bold">
                         {formatCurrency(item.total)}
                       </td>
+                      {stay.status === "ACTIVE" && (
+                        <td className="px-3 py-2.5 text-center no-print">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenEditItem(item)}
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                              title="Edit Item Price, Quantity or Discount"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={deletingItemId === item.id}
+                              onClick={() => handleDeleteBillItem(item.id, item.name)}
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                              title="Delete Item from Bill"
+                            >
+                              {deletingItemId === item.id ? (
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin text-rose-600" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                              )}
+                            </Button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -1004,6 +1189,234 @@ export default function StayBillPage({
           router.push(stay?.status === "ACTIVE" ? "/guests" : "/stays");
         }}
       />
+
+      {/* Edit Room Rate Modal */}
+      <Dialog open={editRoomRateModalOpen} onOpenChange={setEditRoomRateModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Pencil className="w-5 h-5" />
+              <span>Adjust Room Negotiated Rate</span>
+            </DialogTitle>
+            <DialogDescription>
+              Modify the stay rate for Room {stay.room.roomNumber} ({stay.room.type}).
+              All price adjustments are tracked in audit history.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleUpdateRoomRate} className="space-y-4 pt-2">
+            <div className="p-3 bg-muted/40 rounded-lg border text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Current Rate:</span>
+                <span className="font-mono font-bold text-foreground">{formatCurrency(stay.roomPrice)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Guest:</span>
+                <span className="font-medium text-foreground">{stay.customer.fullName}</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="roomPriceInput">New Room Rate (Rs.) *</Label>
+              <Input
+                id="roomPriceInput"
+                type="number"
+                min="0"
+                step="any"
+                required
+                value={editRoomRateValue}
+                onChange={(e) => setEditRoomRateValue(e.target.value)}
+                placeholder="e.g. 1200"
+                className="font-mono text-base"
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="roomRateNotes">Reason for Adjustment / Note (Optional)</Label>
+              <Input
+                id="roomRateNotes"
+                value={editRoomRateNotes}
+                onChange={(e) => setEditRoomRateNotes(e.target.value)}
+                placeholder="e.g. Rate correction entered wrongly at check-in"
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditRoomRateModalOpen(false)}
+                disabled={updatingRoomRate}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updatingRoomRate}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+              >
+                {updatingRoomRate ? "Updating..." : "Save New Rate"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Bill Item Modal */}
+      <Dialog open={editItemModalOpen} onOpenChange={setEditItemModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-600">
+              <Pencil className="w-5 h-5" />
+              <span>Edit Bill Item / Apply Discount</span>
+            </DialogTitle>
+            <DialogDescription>
+              Adjust unit price, quantity, or apply discounts for this item on the live bill.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedItemForEdit && (
+            <form onSubmit={handleUpdateItem} className="space-y-4 pt-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="editItemName">Item Description / Name</Label>
+                <Input
+                  id="editItemName"
+                  value={editItemName}
+                  onChange={(e) => setEditItemName(e.target.value)}
+                  placeholder="Item name"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="editItemQty">Quantity *</Label>
+                  <Input
+                    id="editItemQty"
+                    type="number"
+                    min="1"
+                    step="1"
+                    required
+                    value={editItemQty}
+                    onChange={(e) => setEditItemQty(e.target.value)}
+                    className="font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="editItemPrice">Unit Price (Rs.) *</Label>
+                  <Input
+                    id="editItemPrice"
+                    type="number"
+                    min="0"
+                    step="any"
+                    required
+                    value={editItemPrice}
+                    onChange={(e) => setEditItemPrice(e.target.value)}
+                    className="font-mono font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Quick Discount Assistant */}
+              <div className="p-3 bg-muted/40 rounded-lg border space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Tag className="w-3.5 h-3.5 text-blue-500" />
+                    Quick Discount Helper:
+                  </span>
+                  <span className="font-mono text-[11px]">
+                    Original: {formatCurrency(selectedItemForEdit.unitPrice)}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[10, 20, 50, 100].map((amt) => (
+                    <Button
+                      key={amt}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[11px] px-2"
+                      onClick={() => {
+                        const newP = Math.max(0, selectedItemForEdit.unitPrice - amt);
+                        setEditItemPrice(String(newP));
+                        setEditItemNotes((prev) => prev || `Rs. ${amt} discount applied`);
+                      }}
+                    >
+                      -Rs. {amt}
+                    </Button>
+                  ))}
+                  {[5, 10, 15, 20].map((pct) => (
+                    <Button
+                      key={`pct_${pct}`}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[11px] px-2"
+                      onClick={() => {
+                        const discountAmt = Math.round((selectedItemForEdit.unitPrice * (pct / 100)) * 100) / 100;
+                        const newP = Math.max(0, selectedItemForEdit.unitPrice - discountAmt);
+                        setEditItemPrice(String(newP));
+                        setEditItemNotes((prev) => prev || `${pct}% discount applied`);
+                      }}
+                    >
+                      -{pct}%
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 text-muted-foreground"
+                    onClick={() => {
+                      setEditItemPrice(String(selectedItemForEdit.unitPrice));
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+
+              {/* Calculated Total Display */}
+              <div className="p-2.5 bg-primary/5 rounded-lg border border-primary/20 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Calculated Item Total:</span>
+                <span className="font-mono font-bold text-sm text-foreground">
+                  {formatCurrency((Number(editItemQty) || 0) * (Number(editItemPrice) || 0))}
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="editItemNotes">Notes / Reason (Optional)</Label>
+                <Input
+                  id="editItemNotes"
+                  value={editItemNotes}
+                  onChange={(e) => setEditItemNotes(e.target.value)}
+                  placeholder="e.g. VIP discount, Price correction"
+                />
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditItemModalOpen(false)}
+                  disabled={updatingItem}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updatingItem}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                >
+                  {updatingItem ? "Saving..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

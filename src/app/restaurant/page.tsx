@@ -25,6 +25,8 @@ import {
   Pencil,
   Calendar,
   Filter,
+  Tag,
+  Percent,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -108,7 +110,9 @@ export default function RestaurantPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [guestCount, setGuestCount] = useState("2");
   const [orderNotes, setOrderNotes] = useState("");
-  const [selectedTray, setSelectedTray] = useState<{ [name: string]: { item: MenuItem; qty: number; notes: string } }>({});
+  const [selectedTray, setSelectedTray] = useState<{
+    [name: string]: { item: MenuItem; qty: number; notes: string; customPrice?: number };
+  }>({});
   const [menuSearch, setMenuSearch] = useState("");
   const [quickCategory, setQuickCategory] = useState("ALL");
   const [showGuestDetails, setShowGuestDetails] = useState(false);
@@ -124,6 +128,21 @@ export default function RestaurantPage() {
   // Table Bill Details Modal
   const [billModalOpen, setBillModalOpen] = useState(false);
   const [activeBillTable, setActiveBillTable] = useState<TableData | null>(null);
+
+  // Edit Dining Item Modal (in Table Bill)
+  const [editDiningItemModalOpen, setEditDiningItemModalOpen] = useState(false);
+  const [selectedDiningItemForEdit, setSelectedDiningItemForEdit] = useState<OrderItem | null>(null);
+  const [editDiningItemName, setEditDiningItemName] = useState("");
+  const [editDiningItemPrice, setEditDiningItemPrice] = useState("");
+  const [editDiningItemQty, setEditDiningItemQty] = useState("1");
+  const [editDiningItemNotes, setEditDiningItemNotes] = useState("");
+  const [updatingDiningItem, setUpdatingDiningItem] = useState(false);
+
+  // Edit Tray Item Price Modal (in Order Tray)
+  const [editTrayItemModalOpen, setEditTrayItemModalOpen] = useState(false);
+  const [selectedTrayKey, setSelectedTrayKey] = useState<string | null>(null);
+  const [editTrayPrice, setEditTrayPrice] = useState("");
+  const [editTrayNotes, setEditTrayNotes] = useState("");
 
   // Settlement Modal State
   const [settleModalOpen, setSettleModalOpen] = useState(false);
@@ -287,6 +306,111 @@ export default function RestaurantPage() {
     }
   };
 
+  // Edit Active Order Item in Live Table Bill
+  const handleOpenEditDiningItem = (item: OrderItem) => {
+    setSelectedDiningItemForEdit(item);
+    setEditDiningItemName(item.name);
+    setEditDiningItemPrice(String(item.unitPrice));
+    setEditDiningItemQty(String(item.quantity));
+    setEditDiningItemNotes(item.notes || "");
+    setEditDiningItemModalOpen(true);
+  };
+
+  const handleUpdateActiveOrderItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeBillTable || !activeBillTable.activeOrder || !selectedDiningItemForEdit?.id) return;
+    const orderId = activeBillTable.activeOrder.id;
+    const itemId = selectedDiningItemForEdit.id;
+
+    const priceNum = Number(editDiningItemPrice);
+    const qtyNum = Number(editDiningItemQty);
+
+    if (isNaN(priceNum) || priceNum < 0) {
+      toast.error("Please enter a valid price (Rs. 0 or greater)");
+      return;
+    }
+    if (isNaN(qtyNum) || qtyNum < 1) {
+      toast.error("Quantity must be at least 1");
+      return;
+    }
+
+    setUpdatingDiningItem(true);
+    try {
+      const res = await fetch(`/api/dining/orders/${orderId}/items`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemId,
+          name: editDiningItemName.trim() || selectedDiningItemForEdit.name,
+          unitPrice: priceNum,
+          quantity: qtyNum,
+          notes: editDiningItemNotes || null,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update item");
+      }
+
+      toast.success(`Updated "${editDiningItemName || selectedDiningItemForEdit.name}"`);
+      setEditDiningItemModalOpen(false);
+
+      if (data.order) {
+        setActiveBillTable((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            activeOrder: data.order,
+          };
+        });
+      }
+
+      fetchTables();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to update order item");
+    } finally {
+      setUpdatingDiningItem(false);
+    }
+  };
+
+  // Edit Tray Item Price
+  const handleOpenEditTrayItem = (name: string) => {
+    const entry = selectedTray[name];
+    if (!entry) return;
+    setSelectedTrayKey(name);
+    setEditTrayPrice(String(entry.customPrice !== undefined ? entry.customPrice : entry.item.defaultPrice));
+    setEditTrayNotes(entry.notes || "");
+    setEditTrayItemModalOpen(true);
+  };
+
+  const handleSaveTrayItemPrice = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTrayKey) return;
+    const priceNum = Number(editTrayPrice);
+    if (isNaN(priceNum) || priceNum < 0) {
+      toast.error("Please enter a valid price");
+      return;
+    }
+
+    setSelectedTray((prev) => {
+      const existing = prev[selectedTrayKey];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [selectedTrayKey]: {
+          ...existing,
+          customPrice: priceNum,
+          notes: editTrayNotes || existing.notes,
+        },
+      };
+    });
+
+    setEditTrayItemModalOpen(false);
+    toast.success(`Updated tray price for ${selectedTrayKey}`);
+  };
+
   // Handle Opening "New Order"
   const handleOpenNewOrder = (table: TableData) => {
     setSelectedTable(table);
@@ -378,7 +502,7 @@ export default function RestaurantPage() {
 
   const trayTotal = useMemo(() => {
     return Object.values(selectedTray).reduce(
-      (sum, val) => sum + val.qty * val.item.defaultPrice,
+      (sum, val) => sum + val.qty * (val.customPrice !== undefined ? val.customPrice : val.item.defaultPrice),
       0
     );
   }, [selectedTray]);
@@ -392,7 +516,7 @@ export default function RestaurantPage() {
       name: t.item.name,
       category: t.item.category,
       quantity: t.qty,
-      unitPrice: t.item.defaultPrice,
+      unitPrice: t.customPrice !== undefined ? t.customPrice : t.item.defaultPrice,
       notes: t.notes || null,
     }));
 
@@ -1746,58 +1870,87 @@ export default function RestaurantPage() {
                       </Button>
                     </div>
                   ) : (
-                    Object.values(selectedTray).map(({ item, qty }) => (
-                      <div
-                        key={item.name}
-                        className="p-2 bg-background border rounded-lg flex items-center justify-between gap-2 text-xs"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-foreground truncate">
-                            {item.name}
+                    Object.values(selectedTray).map(({ item, qty, customPrice, notes }) => {
+                      const effectivePrice = customPrice !== undefined ? customPrice : item.defaultPrice;
+                      const hasCustomRate = customPrice !== undefined && customPrice !== item.defaultPrice;
+                      return (
+                        <div
+                          key={item.name}
+                          className="p-2 bg-background border rounded-lg flex items-center justify-between gap-2 text-xs"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 font-semibold text-foreground truncate">
+                              <span className="truncate">{item.name}</span>
+                              {hasCustomRate && (
+                                <Badge variant="warning" className="text-[9px] px-1 py-0 h-4">
+                                  Custom Rate
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-[11px] font-mono text-muted-foreground flex items-center gap-1 flex-wrap">
+                              <span>
+                                {qty} × {formatCurrency(effectivePrice)} ={" "}
+                              </span>
+                              <strong className="text-foreground">
+                                {formatCurrency(qty * effectivePrice)}
+                              </strong>
+                              {hasCustomRate && (
+                                <span className="line-through text-[10px] text-muted-foreground ml-1">
+                                  {formatCurrency(qty * item.defaultPrice)}
+                                </span>
+                              )}
+                            </div>
+                            {notes && (
+                              <div className="text-[10px] text-primary truncate italic">{notes}</div>
+                            )}
                           </div>
-                          <div className="text-[11px] font-mono text-muted-foreground">
-                            {qty} × {formatCurrency(item.defaultPrice)} ={" "}
-                            <strong className="text-foreground">
-                              {formatCurrency(qty * item.defaultPrice)}
-                            </strong>
-                          </div>
-                        </div>
 
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            onClick={() => handleUpdateTrayQty(item.name, -1)}
-                            className="h-7 w-7 text-xs"
-                            title="Decrease quantity"
-                          >
-                            -
-                          </Button>
-                          <span className="font-mono font-bold px-1 text-xs min-w-[18px] text-center">{qty}</span>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            onClick={() => handleUpdateTrayQty(item.name, 1)}
-                            className="h-7 w-7 text-xs"
-                            title="Increase quantity"
-                          >
-                            +
-                          </Button>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleRemoveTrayItem(item.name)}
-                            className="h-7 w-7 text-xs text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                            title="Remove from tray"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                          </Button>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleOpenEditTrayItem(item.name)}
+                              className="h-7 w-7 text-xs text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                              title="Edit price or apply discount"
+                            >
+                              <Pencil className="w-3.5 h-3.5 text-blue-500" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              onClick={() => handleUpdateTrayQty(item.name, -1)}
+                              className="h-7 w-7 text-xs"
+                              title="Decrease quantity"
+                            >
+                              -
+                            </Button>
+                            <span className="font-mono font-bold px-1 text-xs min-w-[18px] text-center">{qty}</span>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              onClick={() => handleUpdateTrayQty(item.name, 1)}
+                              className="h-7 w-7 text-xs"
+                              title="Increase quantity"
+                            >
+                              +
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleRemoveTrayItem(item.name)}
+                              className="h-7 w-7 text-xs text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                              title="Remove from tray"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
 
@@ -1899,7 +2052,7 @@ export default function RestaurantPage() {
                       <th className="px-1.5 py-2 text-center">Qty</th>
                       <th className="px-2 py-2 text-right">Rate</th>
                       <th className="px-2.5 py-2 text-right">Total</th>
-                      <th className="px-1.5 py-2 text-center w-8">Action</th>
+                      <th className="px-1.5 py-2 text-center w-14">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-xs">
@@ -1921,21 +2074,34 @@ export default function RestaurantPage() {
                           {formatCurrency(it.total)}
                         </td>
                         <td className="px-1.5 py-2 text-center">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            disabled={!it.id || removingItemId === it.id}
-                            onClick={() => it.id && handleRemoveActiveOrderItem(it.id, it.name)}
-                            className="h-6 w-6 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                            title={`Remove ${it.name} from order`}
-                          >
-                            {removingItemId === it.id ? (
-                              <RefreshCw className="w-3 h-3 animate-spin text-rose-600" />
-                            ) : (
-                              <Trash2 className="w-3 h-3 text-rose-500" />
-                            )}
-                          </Button>
+                          <div className="flex items-center justify-center gap-0.5">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              disabled={!it.id}
+                              onClick={() => handleOpenEditDiningItem(it)}
+                              className="h-6 w-6 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                              title={`Edit price, quantity, or discount for ${it.name}`}
+                            >
+                              <Pencil className="w-3 h-3 text-blue-500" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              disabled={!it.id || removingItemId === it.id}
+                              onClick={() => it.id && handleRemoveActiveOrderItem(it.id, it.name)}
+                              className="h-6 w-6 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                              title={`Remove ${it.name} from order`}
+                            >
+                              {removingItemId === it.id ? (
+                                <RefreshCw className="w-3 h-3 animate-spin text-rose-600" />
+                              ) : (
+                                <Trash2 className="w-3 h-3 text-rose-500" />
+                              )}
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -2574,6 +2740,292 @@ export default function RestaurantPage() {
         dueAmount={Number(settleAmount) || activeBillTable?.activeOrder?.totalAmount || 0}
         guestName={activeBillTable?.activeOrder?.customerName || "Restaurant Customer"}
       />
+
+      {/* Edit Dining Item in Live Bill Modal */}
+      <Dialog open={editDiningItemModalOpen} onOpenChange={setEditDiningItemModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Pencil className="w-5 h-5" />
+              <span>Edit Order Item / Discount</span>
+            </DialogTitle>
+            <DialogDescription>
+              Modify price or quantity for items on {activeBillTable?.name}&apos;s live bill.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedDiningItemForEdit && (
+            <form onSubmit={handleUpdateActiveOrderItem} className="space-y-4 pt-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="diningItemName">Item Name</Label>
+                <Input
+                  id="diningItemName"
+                  value={editDiningItemName}
+                  onChange={(e) => setEditDiningItemName(e.target.value)}
+                  placeholder="Item name"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="diningItemQty">Quantity *</Label>
+                  <Input
+                    id="diningItemQty"
+                    type="number"
+                    min="1"
+                    step="1"
+                    required
+                    value={editDiningItemQty}
+                    onChange={(e) => setEditDiningItemQty(e.target.value)}
+                    className="font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="diningItemPrice">Unit Rate (Rs.) *</Label>
+                  <Input
+                    id="diningItemPrice"
+                    type="number"
+                    min="0"
+                    step="any"
+                    required
+                    value={editDiningItemPrice}
+                    onChange={(e) => setEditDiningItemPrice(e.target.value)}
+                    className="font-mono font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Quick Discount Assistant */}
+              <div className="p-3 bg-muted/40 rounded-lg border space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Tag className="w-3.5 h-3.5 text-primary" />
+                    Quick Discount Helper:
+                  </span>
+                  <span className="font-mono text-[11px]">
+                    Current: {formatCurrency(selectedDiningItemForEdit.unitPrice)}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[10, 20, 50, 100].map((amt) => (
+                    <Button
+                      key={amt}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[11px] px-2"
+                      onClick={() => {
+                        const newP = Math.max(0, selectedDiningItemForEdit.unitPrice - amt);
+                        setEditDiningItemPrice(String(newP));
+                        setEditDiningItemNotes((prev) => prev || `Rs. ${amt} discount applied`);
+                      }}
+                    >
+                      -Rs. {amt}
+                    </Button>
+                  ))}
+                  {[5, 10, 15, 20].map((pct) => (
+                    <Button
+                      key={`dining_pct_${pct}`}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[11px] px-2"
+                      onClick={() => {
+                        const discountAmt = Math.round((selectedDiningItemForEdit.unitPrice * (pct / 100)) * 100) / 100;
+                        const newP = Math.max(0, selectedDiningItemForEdit.unitPrice - discountAmt);
+                        setEditDiningItemPrice(String(newP));
+                        setEditDiningItemNotes((prev) => prev || `${pct}% discount applied`);
+                      }}
+                    >
+                      -{pct}%
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 text-muted-foreground"
+                    onClick={() => {
+                      setEditDiningItemPrice(String(selectedDiningItemForEdit.unitPrice));
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+
+              {/* Calculated Total Display */}
+              <div className="p-2.5 bg-primary/5 rounded-lg border border-primary/20 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Calculated Item Total:</span>
+                <span className="font-mono font-bold text-sm text-foreground">
+                  {formatCurrency((Number(editDiningItemQty) || 0) * (Number(editDiningItemPrice) || 0))}
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="diningItemNotes">Notes / Special Instruction (Optional)</Label>
+                <Input
+                  id="diningItemNotes"
+                  value={editDiningItemNotes}
+                  onChange={(e) => setEditDiningItemNotes(e.target.value)}
+                  placeholder="e.g. VIP discount, Corrected price"
+                />
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditDiningItemModalOpen(false)}
+                  disabled={updatingDiningItem}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updatingDiningItem}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                >
+                  {updatingDiningItem ? "Saving..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Item Price in Order Tray Modal */}
+      <Dialog open={editTrayItemModalOpen} onOpenChange={setEditTrayItemModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Pencil className="w-5 h-5" />
+              <span>Customize Tray Item Rate</span>
+            </DialogTitle>
+            <DialogDescription>
+              Adjust unit price or apply discount to {selectedTrayKey} before sending to table.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedTrayKey && selectedTray[selectedTrayKey] && (
+            <form onSubmit={handleSaveTrayItemPrice} className="space-y-4 pt-2">
+              <div className="p-3 bg-muted/40 rounded-lg border text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Default Menu Rate:</span>
+                  <span className="font-mono font-bold text-foreground">
+                    {formatCurrency(selectedTray[selectedTrayKey].item.defaultPrice)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Quantity in Tray:</span>
+                  <span className="font-medium text-foreground">{selectedTray[selectedTrayKey].qty}</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="trayItemPriceInput">Special / Negotiated Rate (Rs.) *</Label>
+                <Input
+                  id="trayItemPriceInput"
+                  type="number"
+                  min="0"
+                  step="any"
+                  required
+                  value={editTrayPrice}
+                  onChange={(e) => setEditTrayPrice(e.target.value)}
+                  className="font-mono text-base font-bold"
+                  autoFocus
+                />
+              </div>
+
+              {/* Quick Discount Assistant */}
+              <div className="p-3 bg-muted/40 rounded-lg border space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Tag className="w-3.5 h-3.5 text-primary" />
+                    Quick Discount Helper:
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[10, 20, 50, 100].map((amt) => (
+                    <Button
+                      key={amt}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[11px] px-2"
+                      onClick={() => {
+                        const base = selectedTray[selectedTrayKey].item.defaultPrice;
+                        const newP = Math.max(0, base - amt);
+                        setEditTrayPrice(String(newP));
+                        setEditTrayNotes((prev) => prev || `Rs. ${amt} discount`);
+                      }}
+                    >
+                      -Rs. {amt}
+                    </Button>
+                  ))}
+                  {[5, 10, 15, 20].map((pct) => (
+                    <Button
+                      key={`tray_pct_${pct}`}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[11px] px-2"
+                      onClick={() => {
+                        const base = selectedTray[selectedTrayKey].item.defaultPrice;
+                        const discountAmt = Math.round((base * (pct / 100)) * 100) / 100;
+                        const newP = Math.max(0, base - discountAmt);
+                        setEditTrayPrice(String(newP));
+                        setEditTrayNotes((prev) => prev || `${pct}% discount`);
+                      }}
+                    >
+                      -{pct}%
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 text-muted-foreground"
+                    onClick={() => {
+                      setEditTrayPrice(String(selectedTray[selectedTrayKey].item.defaultPrice));
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="trayItemNotes">Kitchen Note / Reason (Optional)</Label>
+                <Input
+                  id="trayItemNotes"
+                  value={editTrayNotes}
+                  onChange={(e) => setEditTrayNotes(e.target.value)}
+                  placeholder="e.g. Regular customer discount"
+                />
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditTrayItemModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                >
+                  Apply to Tray
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

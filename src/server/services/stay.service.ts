@@ -244,6 +244,177 @@ export async function addBillItem(input: {
   return item;
 }
 
+export async function updateBillItem(input: {
+  stayId: string;
+  itemId: string;
+  unitPrice?: number;
+  quantity?: number;
+  name?: string;
+  notes?: string | null;
+  userId: string;
+  userName: string;
+}) {
+  const stay = await prisma.stay.findUnique({
+    where: { id: input.stayId },
+  });
+
+  if (!stay) throw new Error("Stay not found");
+  if (stay.status !== "ACTIVE") throw new Error("Cannot edit items on a checked-out stay");
+
+  const item = await prisma.billItem.findUnique({
+    where: { id: input.itemId },
+  });
+
+  if (!item || item.stayId !== input.stayId) {
+    throw new Error("Bill item not found for this stay");
+  }
+
+  const oldPrice = item.unitPrice;
+  const oldQuantity = item.quantity;
+  const oldTotal = item.total;
+
+  const unitPrice = input.unitPrice !== undefined ? Math.max(0, Number(input.unitPrice)) : item.unitPrice;
+  const quantity = input.quantity !== undefined ? Math.max(1, parseInt(String(input.quantity)) || 1) : item.quantity;
+  const total = Math.round((quantity * unitPrice + Number.EPSILON) * 100) / 100;
+  const name = input.name ? input.name.trim() : item.name;
+  const notes = input.notes !== undefined ? (input.notes?.trim() || null) : item.notes;
+
+  const updatedItem = await prisma.billItem.update({
+    where: { id: input.itemId },
+    data: {
+      name,
+      quantity,
+      unitPrice,
+      total,
+      notes,
+    },
+  });
+
+  await logAuditEvent({
+    userId: input.userId,
+    userName: input.userName,
+    action: "BILL_ITEM_UPDATED",
+    entity: "BillItem",
+    entityId: item.id,
+    metadata: {
+      stayId: input.stayId,
+      name: updatedItem.name,
+      oldPrice,
+      newPrice: unitPrice,
+      oldQuantity,
+      newQuantity: quantity,
+      oldTotal,
+      newTotal: total,
+    },
+  });
+
+  return updatedItem;
+}
+
+export async function removeBillItem(input: {
+  stayId: string;
+  itemId: string;
+  userId: string;
+  userName: string;
+}) {
+  const stay = await prisma.stay.findUnique({
+    where: { id: input.stayId },
+  });
+
+  if (!stay) throw new Error("Stay not found");
+  if (stay.status !== "ACTIVE") throw new Error("Cannot remove items from a checked-out stay");
+
+  const item = await prisma.billItem.findUnique({
+    where: { id: input.itemId },
+  });
+
+  if (!item || item.stayId !== input.stayId) {
+    throw new Error("Bill item not found for this stay");
+  }
+
+  await prisma.billItem.delete({
+    where: { id: input.itemId },
+  });
+
+  await logAuditEvent({
+    userId: input.userId,
+    userName: input.userName,
+    action: "BILL_ITEM_DELETED",
+    entity: "BillItem",
+    entityId: input.itemId,
+    metadata: {
+      stayId: input.stayId,
+      name: item.name,
+      category: item.category,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      total: item.total,
+    },
+  });
+
+  return { success: true };
+}
+
+export async function updateStayRoomPrice(input: {
+  stayId: string;
+  roomPrice: number;
+  notes?: string | null;
+  userId: string;
+  userName: string;
+}) {
+  const stay = await prisma.stay.findUnique({
+    where: { id: input.stayId },
+    include: {
+      room: true,
+      customer: true,
+      billItems: true,
+      payments: true,
+    },
+  });
+
+  if (!stay) throw new Error("Stay not found");
+  if (stay.status !== "ACTIVE") throw new Error("Cannot modify room rate for a checked-out stay");
+
+  const newPrice = Math.max(0, Math.round((Number(input.roomPrice) + Number.EPSILON) * 100) / 100);
+  const oldPrice = stay.roomPrice;
+
+  const updatedStay = await prisma.stay.update({
+    where: { id: input.stayId },
+    data: {
+      roomPrice: newPrice,
+      ...(input.notes !== undefined ? { notes: input.notes?.trim() || null } : {}),
+    },
+    include: {
+      customer: true,
+      room: true,
+      accompanyingGuests: true,
+      billItems: true,
+      payments: true,
+    },
+  });
+
+  await logAuditEvent({
+    userId: input.userId,
+    userName: input.userName,
+    action: "ROOM_PRICE_UPDATED",
+    entity: "Stay",
+    entityId: stay.id,
+    metadata: {
+      stayId: stay.id,
+      roomNumber: stay.room.roomNumber,
+      customerName: stay.customer.fullName,
+      oldPrice,
+      newPrice,
+      notes: input.notes || null,
+    },
+  });
+
+  return {
+    ...updatedStay,
+    billCalculation: calculateStayBill(updatedStay),
+  };
+}
+
 export async function addPayment(input: {
   stayId: string;
   amount: number;
