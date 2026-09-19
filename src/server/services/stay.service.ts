@@ -411,7 +411,11 @@ export async function updateStayRoomPrice(input: {
 
   return {
     ...updatedStay,
-    billCalculation: calculateStayBill(updatedStay),
+    billCalculation: calculateStayBill({
+      roomPrice: updatedStay.roomPrice,
+      billItems: updatedStay.billItems as any,
+      payments: updatedStay.payments,
+    }),
   };
 }
 

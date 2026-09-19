@@ -2,7 +2,7 @@ import { BillItemCategory } from "@/types";
 
 export interface BillCalculationItem {
   id?: string;
-  category: BillItemCategory;
+  category: BillItemCategory | string;
   name: string;
   quantity: number;
   unitPrice: number;
@@ -16,8 +16,8 @@ export interface BillPaymentItem {
 
 export interface StayBillingInput {
   roomPrice: number;
-  billItems: BillCalculationItem[];
-  payments: BillPaymentItem[];
+  billItems?: BillCalculationItem[] | any[];
+  payments?: BillPaymentItem[] | any[];
 }
 
 export interface StayBillingResult {
