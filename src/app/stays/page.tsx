@@ -222,10 +222,31 @@ export default function StaysHistoryPage() {
           ) : (
             <>
               <div className="sm:hidden flex items-center justify-between text-[11px] text-muted-foreground p-2 border-b bg-muted/20">
-                <span className="font-medium text-foreground">Stay Records</span>
-                <span className="text-[10px] text-primary/80 font-medium">← Slide left/right to view →</span>
+                <span className="font-semibold text-foreground">Stay Records</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-primary/80 font-medium">← Swipe →</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const el = document.getElementById("stay-history-table");
+                      if (el) {
+                        const isAtEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 15;
+                        el.scrollTo({ left: isAtEnd ? 0 : el.scrollWidth, behavior: "smooth" });
+                      }
+                    }}
+                    className="h-6 px-2 text-[10px] font-semibold bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                  >
+                    Billing & Actions ➔
+                  </Button>
+                </div>
               </div>
-              <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pan-y]">
+              <div
+                id="stay-history-table"
+                className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pan-y] scroll-smooth"
+                style={{ touchAction: "pan-x pan-y", WebkitOverflowScrolling: "touch" }}
+              >
                 <table className="w-full min-w-[720px] text-sm text-left">
                 <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
                   <tr>

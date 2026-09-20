@@ -56,11 +56,10 @@
   html,
   body {
     @apply bg-background text-foreground;
-    overflow-x: hidden;
-    overscroll-behavior-x: none;
+    overflow-x: clip;
     -webkit-tap-highlight-color: transparent;
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-y pinch-zoom;
+    touch-action: manipulation;
   }
 
   /* Prevent stuck scroll lock on mobile and desktop modals */
@@ -72,14 +71,18 @@
   /* Hardware-accelerated smooth momentum scrolling */
   .overflow-y-auto,
   .overflow-x-auto,
+  .overflow-x-scroll,
   main,
   [data-radix-scroll-area-viewport] {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
 
-  .overflow-x-auto {
+  .overflow-x-auto,
+  .overflow-x-scroll,
+  [data-scroll-x="true"] {
     touch-action: pan-x pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
     overscroll-behavior-x: contain;
   }
 }

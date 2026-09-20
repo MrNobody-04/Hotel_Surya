@@ -595,10 +595,31 @@ export default function StayBillPage({
             </div>
 
             <div className="sm:hidden flex items-center justify-between text-[11px] text-muted-foreground mb-1.5 px-0.5 no-print">
-              <span>Itemized Charges</span>
-              <span className="text-[10px] text-primary/80 font-medium">← Slide left/right to view →</span>
+              <span className="font-semibold text-foreground">Itemized Charges</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-primary/80 font-medium">← Swipe →</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const el = document.getElementById("stay-bill-charges-table");
+                    if (el) {
+                      const isAtEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 15;
+                      el.scrollTo({ left: isAtEnd ? 0 : el.scrollWidth, behavior: "smooth" });
+                    }
+                  }}
+                  className="h-6 px-2 text-[10px] font-semibold bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                >
+                  Prices & Actions ➔
+                </Button>
+              </div>
             </div>
-            <div className="w-full overflow-x-auto border rounded-lg max-w-full overscroll-x-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pan-y]">
+            <div
+              id="stay-bill-charges-table"
+              className="w-full overflow-x-auto border rounded-lg max-w-full overscroll-x-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pan-y] scroll-smooth"
+              style={{ touchAction: "pan-x pan-y", WebkitOverflowScrolling: "touch" }}
+            >
               <table className="w-full min-w-[540px] text-sm text-left">
                 <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
                   <tr>
@@ -747,7 +768,33 @@ export default function StayBillPage({
                 No payments recorded yet for this stay.
               </div>
             ) : (
-              <div className="w-full overflow-x-auto border rounded-lg max-w-full overscroll-x-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pan-y]">
+              <>
+                <div className="sm:hidden flex items-center justify-between text-[11px] text-muted-foreground mb-1.5 px-0.5 no-print">
+                  <span className="font-semibold text-foreground">Payment Records</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-primary/80 font-medium">← Swipe →</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const el = document.getElementById("stay-bill-payments-table");
+                        if (el) {
+                          const isAtEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 15;
+                          el.scrollTo({ left: isAtEnd ? 0 : el.scrollWidth, behavior: "smooth" });
+                        }
+                      }}
+                      className="h-6 px-2 text-[10px] font-semibold bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                    >
+                      Amounts ➔
+                    </Button>
+                  </div>
+                </div>
+                <div
+                  id="stay-bill-payments-table"
+                  className="w-full overflow-x-auto border rounded-lg max-w-full overscroll-x-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pan-y] scroll-smooth"
+                  style={{ touchAction: "pan-x pan-y", WebkitOverflowScrolling: "touch" }}
+                >
                 <table className="w-full min-w-[500px] text-sm text-left">
                   <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
                     <tr>
@@ -781,6 +828,7 @@ export default function StayBillPage({
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </div>
 

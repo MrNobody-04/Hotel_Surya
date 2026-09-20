@@ -2024,9 +2024,9 @@ export default function RestaurantPage() {
 
       {/* LIVE TABLE BILL DETAILS MODAL */}
       <Dialog open={billModalOpen} onOpenChange={setBillModalOpen}>
-        <DialogContent className="w-[96vw] max-w-xl max-h-[90dvh] flex flex-col p-3 sm:p-6 overflow-hidden">
+        <DialogContent className="w-[96vw] max-w-xl max-h-[92dvh] flex flex-col p-3.5 sm:p-6 overflow-y-auto">
           {activeBillTable && activeBillTable.activeOrder && (
-            <div className="flex flex-col flex-1 overflow-hidden space-y-3 min-h-0">
+            <div className="flex flex-col space-y-3">
               <DialogHeader className="shrink-0 pb-2 border-b">
                 <div className="flex items-center justify-between">
                   <DialogTitle className="text-base sm:text-lg font-bold">
@@ -2044,11 +2044,34 @@ export default function RestaurantPage() {
               </DialogHeader>
 
               {/* Items List Table */}
-              <div className="sm:hidden flex items-center justify-between text-[11px] text-muted-foreground px-0.5">
-                <span className="font-semibold text-foreground">Ordered Items</span>
-                <span className="text-[10px] text-primary/80 font-medium">← Slide left/right to view →</span>
+              <div className="flex items-center justify-between text-xs text-muted-foreground px-0.5">
+                <span className="font-semibold text-foreground">
+                  Ordered Items ({activeBillTable.activeOrder.items.length})
+                </span>
+                <div className="sm:hidden flex items-center gap-1.5">
+                  <span className="text-[10px] text-primary/80 font-medium">← Swipe →</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const el = document.getElementById("restaurant-live-bill-table");
+                      if (el) {
+                        const isAtEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 15;
+                        el.scrollTo({ left: isAtEnd ? 0 : el.scrollWidth, behavior: "smooth" });
+                      }
+                    }}
+                    className="h-6 px-2 text-[10px] font-semibold bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                  >
+                    Rates & Actions ➔
+                  </Button>
+                </div>
               </div>
-              <div className="w-full overflow-x-auto overflow-y-auto max-h-[44vh] border rounded-lg max-w-full flex-1 min-h-0 overscroll-x-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pan-y]">
+              <div
+                id="restaurant-live-bill-table"
+                className="w-full overflow-x-auto border rounded-lg max-w-full max-h-[46vh] overflow-y-auto overscroll-contain scroll-smooth"
+                style={{ touchAction: "pan-x pan-y", WebkitOverflowScrolling: "touch" }}
+              >
                 <table className="w-full min-w-[480px] sm:min-w-full text-xs sm:text-sm text-left">
                   <thead className="text-[11px] sm:text-xs uppercase bg-muted/50 text-muted-foreground border-b sticky top-0 bg-background z-10">
                     <tr>
