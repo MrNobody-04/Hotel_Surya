@@ -594,7 +594,11 @@ export default function StayBillPage({
               )}
             </div>
 
-            <div className="w-full overflow-x-auto border rounded-lg max-w-full">
+            <div className="sm:hidden flex items-center justify-between text-[11px] text-muted-foreground mb-1.5 px-0.5 no-print">
+              <span>Itemized Charges</span>
+              <span className="text-[10px] text-primary/80 font-medium">← Slide left/right to view →</span>
+            </div>
+            <div className="w-full overflow-x-auto border rounded-lg max-w-full overscroll-x-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pan-y]">
               <table className="w-full min-w-[540px] text-sm text-left">
                 <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
                   <tr>
@@ -743,7 +747,7 @@ export default function StayBillPage({
                 No payments recorded yet for this stay.
               </div>
             ) : (
-              <div className="w-full overflow-x-auto border rounded-lg max-w-full">
+              <div className="w-full overflow-x-auto border rounded-lg max-w-full overscroll-x-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pan-y]">
                 <table className="w-full min-w-[500px] text-sm text-left">
                   <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
                     <tr>

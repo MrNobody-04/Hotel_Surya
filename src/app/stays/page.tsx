@@ -29,12 +29,21 @@ export default function StaysHistoryPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [periodFilter, setPeriodFilter] = useState<"ALL" | "TODAY" | "YESTERDAY" | "WEEK">("ALL");
   const [deleteTarget, setDeleteTarget] = useState<DeleteStayTarget | null>(null);
 
-  const fetchHistory = async () => {
+  const fetchHistory = async (overridePeriod?: "ALL" | "TODAY" | "YESTERDAY" | "WEEK") => {
     try {
       setLoading(true);
-      const res = await fetch("/api/stays?status=CHECKED_OUT&take=100");
+      const activePeriod = overridePeriod !== undefined ? overridePeriod : periodFilter;
+      const params = new URLSearchParams();
+      params.set("status", "CHECKED_OUT");
+      params.set("take", "100");
+      if (activePeriod !== "ALL") {
+        params.set("period", activePeriod);
+      }
+
+      const res = await fetch(`/api/stays?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setStays(data.stays || []);
@@ -49,8 +58,8 @@ export default function StaysHistoryPage() {
   };
 
   useEffect(() => {
-    fetchHistory();
-  }, []);
+    fetchHistory(periodFilter);
+  }, [periodFilter]);
 
   const exportCSV = () => {
     if (stays.length === 0) {
@@ -137,18 +146,61 @@ export default function StaysHistoryPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex items-center gap-3 p-3 bg-muted/30 border rounded-xl">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-muted/30 border rounded-xl">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search historical stays by guest name, room, or contact..."
-            className="pl-9 h-9 text-sm"
+            className="pl-9 h-9 text-sm bg-background"
           />
         </div>
-        <div className="text-xs text-muted-foreground font-medium">
-          {filtered.length} past stay{filtered.length === 1 ? "" : "s"}
+
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2.5">
+          {/* Period Filter Pills */}
+          <div className="flex items-center gap-1 bg-background/90 p-1 rounded-lg border shadow-xs">
+            <Button
+              type="button"
+              variant={periodFilter === "TODAY" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPeriodFilter("TODAY")}
+              className="h-7 text-xs px-2.5"
+            >
+              Today
+            </Button>
+            <Button
+              type="button"
+              variant={periodFilter === "YESTERDAY" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPeriodFilter("YESTERDAY")}
+              className="h-7 text-xs px-2.5"
+            >
+              Yesterday
+            </Button>
+            <Button
+              type="button"
+              variant={periodFilter === "WEEK" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPeriodFilter("WEEK")}
+              className="h-7 text-xs px-2.5"
+            >
+              1 Week
+            </Button>
+            <Button
+              type="button"
+              variant={periodFilter === "ALL" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPeriodFilter("ALL")}
+              className="h-7 text-xs px-2.5"
+            >
+              All Time
+            </Button>
+          </div>
+
+          <div className="text-xs text-muted-foreground font-medium shrink-0">
+            {filtered.length} past stay{filtered.length === 1 ? "" : "s"}
+          </div>
         </div>
       </div>
 
@@ -168,8 +220,13 @@ export default function StaysHistoryPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
+            <>
+              <div className="sm:hidden flex items-center justify-between text-[11px] text-muted-foreground p-2 border-b bg-muted/20">
+                <span className="font-medium text-foreground">Stay Records</span>
+                <span className="text-[10px] text-primary/80 font-medium">← Slide left/right to view →</span>
+              </div>
+              <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pan-y]">
+                <table className="w-full min-w-[720px] text-sm text-left">
                 <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
                   <tr>
                     <th className="px-4 py-3">Stay ID</th>
@@ -260,6 +317,7 @@ export default function StaysHistoryPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>

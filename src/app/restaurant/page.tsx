@@ -2044,9 +2044,13 @@ export default function RestaurantPage() {
               </DialogHeader>
 
               {/* Items List Table */}
-              <div className="w-full overflow-y-auto max-h-[44vh] border rounded-lg max-w-full flex-1 min-h-0">
-                <table className="w-full text-xs sm:text-sm text-left">
-                  <thead className="text-[11px] sm:text-xs uppercase bg-muted/50 text-muted-foreground border-b sticky top-0 bg-background">
+              <div className="sm:hidden flex items-center justify-between text-[11px] text-muted-foreground px-0.5">
+                <span className="font-semibold text-foreground">Ordered Items</span>
+                <span className="text-[10px] text-primary/80 font-medium">← Slide left/right to view →</span>
+              </div>
+              <div className="w-full overflow-x-auto overflow-y-auto max-h-[44vh] border rounded-lg max-w-full flex-1 min-h-0 overscroll-x-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pan-y]">
+                <table className="w-full min-w-[480px] sm:min-w-full text-xs sm:text-sm text-left">
+                  <thead className="text-[11px] sm:text-xs uppercase bg-muted/50 text-muted-foreground border-b sticky top-0 bg-background z-10">
                     <tr>
                       <th className="px-2.5 py-2">Item</th>
                       <th className="px-1.5 py-2 text-center">Qty</th>

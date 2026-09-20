@@ -685,9 +685,14 @@ export async function getHistoricalStays(filters?: {
   if (filters?.roomId) where.roomId = filters.roomId;
   if (filters?.customerId) where.customerId = filters.customerId;
   if (filters?.startDate || filters?.endDate) {
-    where.checkInAt = {};
-    if (filters.startDate) where.checkInAt.gte = filters.startDate;
-    if (filters.endDate) where.checkInAt.lte = filters.endDate;
+    const dateRange: any = {};
+    if (filters.startDate) dateRange.gte = filters.startDate;
+    if (filters.endDate) dateRange.lte = filters.endDate;
+
+    where.OR = [
+      { checkoutAt: dateRange },
+      { checkInAt: dateRange },
+    ];
   }
 
   const [stays, total] = await Promise.all([

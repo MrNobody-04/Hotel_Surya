@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/server/auth/rbac";
 import { getActiveStays, getHistoricalStays } from "@/server/services/stay.service";
+import { getNepalDateRange } from "@/lib/utils";
 
 export async function GET(request: Request) {
   try {
@@ -10,8 +11,17 @@ export async function GET(request: Request) {
     const status = searchParams.get("status") || "ACTIVE";
     const roomId = searchParams.get("roomId") || undefined;
     const customerId = searchParams.get("customerId") || undefined;
-    const startDate = searchParams.get("startDate") ? new Date(searchParams.get("startDate")!) : undefined;
-    const endDate = searchParams.get("endDate") ? new Date(searchParams.get("endDate")!) : undefined;
+    const period = searchParams.get("period");
+    let startDate = searchParams.get("startDate") ? new Date(searchParams.get("startDate")!) : undefined;
+    let endDate = searchParams.get("endDate") ? new Date(searchParams.get("endDate")!) : undefined;
+
+    if (period && !startDate && !endDate) {
+      const range = getNepalDateRange(period);
+      if (range) {
+        startDate = range.startDate;
+        endDate = range.endDate;
+      }
+    }
     const take = Number(searchParams.get("take")) || 50;
     const skip = Number(searchParams.get("skip")) || 0;
 
