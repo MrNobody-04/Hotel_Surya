@@ -107,6 +107,26 @@ async function main() {
   }
   console.log("✅ Seeded Service & Food Catalog Items");
 
+  // 3b. Seed Default Menu Categories
+  const defaultCategories = [
+    { name: "Momo", icon: "🥟", sortOrder: 1 },
+    { name: "Chowmin & Chopsy", icon: "🍜", sortOrder: 2 },
+    { name: "Khana Set", icon: "🍛", sortOrder: 3 },
+    { name: "Snacks", icon: "🍟", sortOrder: 4 },
+    { name: "Food", icon: "🍲", sortOrder: 5 },
+    { name: "Drinks", icon: "🥤", sortOrder: 6 },
+    { name: "Beers & Spirits", icon: "🍺", sortOrder: 7 },
+  ];
+
+  for (const cat of defaultCategories) {
+    await prisma.menuCategory.upsert({
+      where: { name: cat.name },
+      update: { icon: cat.icon, sortOrder: cat.sortOrder },
+      create: { name: cat.name, icon: cat.icon, sortOrder: cat.sortOrder },
+    });
+  }
+  console.log("✅ Seeded Default Menu Categories");
+
   // 4. Seed Demo Customers
   const customer1 = await prisma.customer.create({
     data: {
