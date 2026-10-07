@@ -224,3 +224,24 @@ export interface PaymentQrDTO {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ServiceItemDTO {
+  id: string;
+  name: string;
+  category: BillItemCategory;
+  categoryName?: string | null;
+  defaultPrice: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface MenuCategoryDTO {
+  id: string;
+  name: string;
+  icon?: string | null;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+

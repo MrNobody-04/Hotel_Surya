@@ -191,12 +191,26 @@ model ServiceItem {
   id           String           @id @default(cuid())
   name         String           @unique
   category     BillItemCategory @default(OTHER)
+  categoryName String?
   defaultPrice Float
   isActive     Boolean          @default(true)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
   @@index([category])
+  @@index([categoryName])
+}
+
+model MenuCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  icon      String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([sortOrder])
 }
 
 model Payment {

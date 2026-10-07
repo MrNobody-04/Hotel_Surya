@@ -27,6 +27,7 @@ import {
   Filter,
   Tag,
   Percent,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -39,6 +40,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, formatNepalDateTime, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { PaymentQrModal } from "@/components/billing/payment-qr-modal";
+import { ManageMenuModal, MenuCategoryData } from "@/components/dining/manage-menu-modal";
 import { TiltCard } from "@/components/ui/tilt-card";
 import { BillItemCategory, PaymentMethod } from "@/types";
 
@@ -57,7 +59,9 @@ interface MenuItem {
   id: string;
   name: string;
   category: BillItemCategory;
+  categoryName?: string | null;
   defaultPrice: number;
+  isActive?: boolean;
 }
 
 interface OrderItem {
@@ -93,6 +97,8 @@ interface TableData {
 export default function RestaurantPage() {
   const [tables, setTables] = useState<TableData[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [menuCategories, setMenuCategories] = useState<MenuCategoryData[]>([]);
+  const [menuModalOpen, setMenuModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Active view tab: "tables" or "history"
@@ -220,6 +226,18 @@ export default function RestaurantPage() {
     }
   };
 
+  const fetchMenuCategories = async () => {
+    try {
+      const res = await fetch("/api/menu-categories");
+      if (res.ok) {
+        const data = await res.json();
+        setMenuCategories(data.categories || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   // History filter period & revenue
   const [historyPeriod, setHistoryPeriod] = useState<"ALL" | "TODAY" | "YESTERDAY" | "WEEK">("TODAY");
   const [historyTotalRevenue, setHistoryTotalRevenue] = useState<number>(0);
@@ -249,6 +267,7 @@ export default function RestaurantPage() {
   useEffect(() => {
     fetchTables();
     fetchMenuItems();
+    fetchMenuCategories();
   }, []);
 
   useEffect(() => {
@@ -830,21 +849,26 @@ export default function RestaurantPage() {
       const matchesSearch = !search || it.name.toLowerCase().includes(search);
 
       let matchesCat = true;
-      if (quickCategory === "FOOD") {
-        matchesCat = it.category === "FOOD";
-      } else if (quickCategory === "DRINK") {
-        matchesCat = it.category === "DRINK";
+      if (quickCategory === "ALL") {
+        matchesCat = true;
+      } else if (it.categoryName && it.categoryName === quickCategory) {
+        matchesCat = true;
+      } else if (quickCategory === "FOOD" || quickCategory === "Food") {
+        matchesCat = it.category === "FOOD" || it.categoryName === "Food";
+      } else if (quickCategory === "DRINK" || quickCategory === "Drinks") {
+        matchesCat = it.category === "DRINK" || it.categoryName === "Drinks";
       } else if (quickCategory === "MOMO") {
-        matchesCat = it.name.toLowerCase().includes("momo");
+        matchesCat = it.name.toLowerCase().includes("momo") || (it.categoryName || "").toLowerCase() === "momo";
       } else if (quickCategory === "CHOWMIN") {
         const n = it.name.toLowerCase();
-        matchesCat = n.includes("chowmin") || n.includes("thukpa") || n.includes("chopsy");
+        matchesCat = n.includes("chowmin") || n.includes("thukpa") || n.includes("chopsy") || (it.categoryName || "").toLowerCase().includes("chowmin");
       } else if (quickCategory === "KHANA") {
         const n = it.name.toLowerCase();
-        matchesCat = n.includes("khana") || n.includes("rice") || n.includes("curry") || n.includes("dal");
+        matchesCat = n.includes("khana") || n.includes("rice") || n.includes("curry") || n.includes("dal") || (it.categoryName || "").toLowerCase().includes("khana");
       } else if (quickCategory === "SNACKS") {
         const n = it.name.toLowerCase();
         matchesCat =
+          (it.categoryName || "").toLowerCase() === "snacks" ||
           n.includes("chana") ||
           n.includes("sadeko") ||
           n.includes("peanut") ||
@@ -861,6 +885,7 @@ export default function RestaurantPage() {
       } else if (quickCategory === "BEERS") {
         const n = it.name.toLowerCase();
         matchesCat =
+          (it.categoryName || "").toLowerCase().includes("beer") ||
           n.includes("beer") ||
           n.includes("tuborg") ||
           n.includes("gorkha") ||
@@ -870,6 +895,10 @@ export default function RestaurantPage() {
           n.includes("rum") ||
           n.includes("wine") ||
           n.includes("cider");
+      } else {
+        // Any custom user-created category!
+        const target = quickCategory.toLowerCase();
+        matchesCat = (it.categoryName || "").toLowerCase() === target || it.name.toLowerCase().includes(target);
       }
 
       return matchesSearch && matchesCat;
@@ -907,6 +936,19 @@ export default function RestaurantPage() {
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Table / Cabin</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMenuModalOpen(true)}
+            className="h-9 gap-1.5 border-primary/40 text-primary hover:bg-primary/10 font-semibold shadow-xs"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Manage Menu & Prices</span>
+            <Badge variant="secondary" className="ml-0.5 text-[10px] px-1.5 py-0 h-4 font-mono font-bold">
+              {menuItems.length}
+            </Badge>
           </Button>
 
           <Button
@@ -1660,42 +1702,69 @@ export default function RestaurantPage() {
               >
                 {/* Search & Category Filter Bar */}
                 <div className="p-2 border-b bg-muted/20 space-y-1.5 shrink-0">
-                  <div className="relative w-full">
-                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
-                    <Input
-                      placeholder="Search dishes or drinks (Momo, Beer, Chopsy...)"
-                      value={menuSearch}
-                      onChange={(e) => setMenuSearch(e.target.value)}
-                      className="h-8 pl-8 pr-7 text-xs"
-                    />
-                    {menuSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setMenuSearch("")}
-                        className="absolute right-2 top-2 text-muted-foreground hover:text-foreground text-xs"
-                      >
-                        ✕
-                      </button>
-                    )}
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="relative flex-1">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Search dishes or drinks (Momo, Beer, Chopsy...)"
+                        value={menuSearch}
+                        onChange={(e) => setMenuSearch(e.target.value)}
+                        className="h-8 pl-8 pr-7 text-xs bg-background"
+                      />
+                      {menuSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setMenuSearch("")}
+                          className="absolute right-2 top-2 text-muted-foreground hover:text-foreground text-xs"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setMenuModalOpen(true)}
+                      className="h-8 px-2 text-[11px] gap-1 font-semibold text-primary border-primary/30 hover:bg-primary/10 shrink-0"
+                      title="Add new dishes/drinks or edit prices"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span className="hidden sm:inline">Add / Edit</span> Menu
+                    </Button>
                   </div>
 
                   {/* Horizontal Scrollable Category Chips */}
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar touch-pan-x">
-                    {QUICK_CATEGORIES.map((cat) => {
-                      const isSelected = quickCategory === cat.id;
+                    <button
+                      type="button"
+                      onClick={() => setQuickCategory("ALL")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all shrink-0 border",
+                        quickCategory === "ALL"
+                          ? "bg-primary text-primary-foreground border-primary shadow-xs font-bold"
+                          : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
+                      )}
+                    >
+                      All Items ({menuItems.length})
+                    </button>
+                    {menuCategories.map((cat) => {
+                      const isSelected = quickCategory === cat.name;
                       return (
                         <button
                           key={cat.id}
                           type="button"
-                          onClick={() => setQuickCategory(cat.id)}
+                          onClick={() => setQuickCategory(cat.name)}
                           className={cn(
-                            "px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all shrink-0 border",
+                            "px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all shrink-0 border flex items-center gap-1",
                             isSelected
                               ? "bg-primary text-primary-foreground border-primary shadow-xs font-bold"
                               : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
                           )}
                         >
-                          {cat.label}
+                          <span>{cat.icon || "🍽️"}</span>
+                          <span>{cat.name}</span>
                         </button>
                       );
                     })}
@@ -3053,6 +3122,20 @@ export default function RestaurantPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* MANAGE MENU & PRICES MODAL */}
+      <ManageMenuModal
+        open={menuModalOpen}
+        onOpenChange={setMenuModalOpen}
+        items={menuItems as any}
+        categories={menuCategories}
+        onRefresh={async () => {
+          await Promise.all([fetchMenuItems(), fetchMenuCategories()]);
+        }}
+        onItemAdded={(newItem) => {
+          handleAddItemToTray(newItem as any);
+        }}
+      />
     </div>
   );
 }
