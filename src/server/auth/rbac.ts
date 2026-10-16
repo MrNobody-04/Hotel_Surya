@@ -64,3 +64,28 @@ export function canDeleteExpenses(role: Role): boolean {
 export function canViewFinancialAnalytics(role: Role): boolean {
   return role === "OWNER" || role === "MANAGER";
 }
+
+export function canViewCredits(role: Role): boolean {
+  return role === "OWNER" || role === "MANAGER" || role === "RECEPTIONIST";
+}
+
+export function canCreateCreditBill(role: Role): boolean {
+  return role === "OWNER" || role === "MANAGER" || role === "RECEPTIONIST";
+}
+
+export function canRecordCreditPayment(role: Role): boolean {
+  return role === "OWNER" || role === "MANAGER" || role === "RECEPTIONIST";
+}
+
+export function canEditCreditBills(role: Role): boolean {
+  return role === "OWNER" || role === "MANAGER";
+}
+
+export function canIssueCreditAdjustments(role: Role): boolean {
+  return role === "OWNER" || role === "MANAGER";
+}
+
+export function canViewCreditReports(role: Role): boolean {
+  return role === "OWNER" || role === "MANAGER";
+}
+

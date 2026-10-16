@@ -45,6 +45,10 @@ export async function getDashboardMetrics(forceFresh: boolean = false) {
     monthDining,
     todayExp,
     monthExp,
+    todayCredit,
+    weekCredit,
+    monthCredit,
+    creditAccountAgg,
   ] = await Promise.all([
     prisma.room.findMany(),
     prisma.stay.count({
@@ -117,6 +121,21 @@ export async function getDashboardMetrics(forceFresh: boolean = false) {
       where: { date: { gte: startOfMonth } },
       _sum: { amount: true },
     }),
+    prisma.creditPayment.aggregate({
+      where: { createdAt: { gte: startOfToday, lte: endOfToday } },
+      _sum: { amount: true },
+    }),
+    prisma.creditPayment.aggregate({
+      where: { createdAt: { gte: startOfWeek } },
+      _sum: { amount: true },
+    }),
+    prisma.creditPayment.aggregate({
+      where: { createdAt: { gte: startOfMonth } },
+      _sum: { amount: true },
+    }),
+    prisma.creditAccount.aggregate({
+      _sum: { currentBalance: true },
+    }),
   ]);
 
   // 1. Room Overview
@@ -157,18 +176,23 @@ export async function getDashboardMetrics(forceFresh: boolean = false) {
     };
   });
 
-  // 4. Financial: Revenue (Hotel Room stays + Restaurant & Cabin Orders)
+  // 4. Financial: Revenue (Hotel Room stays + Restaurant & Cabin Orders + Credit Payments)
   const todayHotelRevenue = todayPayments._sum.amount || 0;
   const todayRestaurantRevenue = todayDining._sum.paidAmount || 0;
-  const todayRevenue = todayHotelRevenue + todayRestaurantRevenue;
+  const todayCreditRevenue = todayCredit._sum.amount || 0;
+  const todayRevenue = todayHotelRevenue + todayRestaurantRevenue + todayCreditRevenue;
 
   const weeklyHotelRevenue = weekPayments._sum.amount || 0;
   const weeklyRestaurantRevenue = weekDining._sum.paidAmount || 0;
-  const weeklyRevenue = weeklyHotelRevenue + weeklyRestaurantRevenue;
+  const weeklyCreditRevenue = weekCredit._sum.amount || 0;
+  const weeklyRevenue = weeklyHotelRevenue + weeklyRestaurantRevenue + weeklyCreditRevenue;
 
   const monthlyHotelRevenue = monthPayments._sum.amount || 0;
   const monthlyRestaurantRevenue = monthDining._sum.paidAmount || 0;
-  const monthlyRevenue = monthlyHotelRevenue + monthlyRestaurantRevenue;
+  const monthlyCreditRevenue = monthCredit._sum.amount || 0;
+  const monthlyRevenue = monthlyHotelRevenue + monthlyRestaurantRevenue + monthlyCreditRevenue;
+
+  const totalOutstandingCredit = creditAccountAgg._sum.currentBalance || 0;
 
   // 5. Financial: Expenses
   const todayExpenses = todayExp._sum.amount || 0;
@@ -202,14 +226,18 @@ export async function getDashboardMetrics(forceFresh: boolean = false) {
       monthlyRevenue,
       todayHotelRevenue,
       todayRestaurantRevenue,
+      todayCreditRevenue,
       weeklyHotelRevenue,
       weeklyRestaurantRevenue,
+      weeklyCreditRevenue,
       monthlyHotelRevenue,
       monthlyRestaurantRevenue,
+      monthlyCreditRevenue,
       todayExpenses,
       monthlyExpenses,
       monthlyNetIncome,
       outstandingPayments: totalOutstandingBalance,
+      totalOutstandingCredit,
     },
     currentGuests: currentGuestsList,
   };
@@ -315,7 +343,19 @@ export async function getDetailedAnalytics(startDate?: Date, endDate?: Date) {
     restaurantRevenue += amount;
   }
 
-  const totalCollectedRevenue = hotelRevenue + restaurantRevenue;
+  // 5b. Payments from Customer Credit
+  const creditPayments = await prisma.creditPayment.findMany({
+    where: startDate || endDate ? { createdAt: whereDate } : undefined,
+  });
+
+  let creditRevenue = 0;
+  for (const cp of creditPayments) {
+    const method = cp.paymentMethod || "CASH";
+    paymentsByMethod[method] = (paymentsByMethod[method] || 0) + cp.amount;
+    creditRevenue += cp.amount;
+  }
+
+  const totalCollectedRevenue = hotelRevenue + restaurantRevenue + creditRevenue;
 
   // 6. Room utilization
   const roomUsageCount: Record<string, number> = {};
@@ -358,6 +398,7 @@ export async function getDetailedAnalytics(startDate?: Date, endDate?: Date) {
     totalCollectedRevenue,
     hotelRevenue,
     restaurantRevenue,
+    creditRevenue,
     paymentsByMethod,
     expensesByCategory,
     totalExpenses,
@@ -366,5 +407,6 @@ export async function getDetailedAnalytics(startDate?: Date, endDate?: Date) {
     topSellingItems,
     staysCount: stays.length,
     diningOrdersCount: diningOrders.length,
+    creditPaymentsCount: creditPayments.length,
   };
 }

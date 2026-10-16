@@ -19,6 +19,7 @@ import {
   Hotel,
   Utensils,
   QrCode,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SessionUser } from "@/types";
@@ -84,6 +85,12 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
     {
       title: "Finance & Records",
       items: [
+        {
+          label: "Credit Management",
+          href: "/credits",
+          icon: CreditCard,
+          show: true,
+        },
         {
           label: "Hotel Expenses",
           href: "/expenses",

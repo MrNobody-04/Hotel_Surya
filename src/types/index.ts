@@ -245,3 +245,166 @@ export interface MenuCategoryDTO {
   updatedAt?: string;
 }
 
+export type CreditAccountStatus = "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE";
+export type CreditBillStatus = "PENDING" | "PARTIALLY_PAID" | "PAID" | "CANCELLED";
+export type CreditLedgerType = "CHARGE" | "PAYMENT" | "ADJUSTMENT" | "REFUND";
+
+export interface CreditAccountDTO {
+  id: string;
+  customerId: string;
+  customer?: {
+    id: string;
+    fullName: string;
+    contactNumber: string;
+    citizenshipNumber?: string | null;
+    address?: string | null;
+  };
+  status: CreditAccountStatus;
+  creditLimit?: number | null;
+  totalCharged: number;
+  totalPaid: number;
+  currentBalance: number;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  pendingBillsCount?: number;
+  lastPaymentDate?: string | null;
+  bills?: CreditBillDTO[];
+  payments?: CreditPaymentDTO[];
+}
+
+export interface CreditBillItemDTO {
+  id: string;
+  billId: string;
+  serviceItemId?: string | null;
+  name: string;
+  category?: string | null;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  originalPrice?: number | null;
+  isCustom: boolean;
+  notes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreditBillDTO {
+  id: string;
+  billNumber: string;
+  accountId: string;
+  customerId: string;
+  customer?: {
+    id: string;
+    fullName: string;
+    contactNumber: string;
+  };
+  status: CreditBillStatus;
+  subtotal: number;
+  discount: number;
+  tax: number;
+  serviceCharge: number;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount?: number;
+  dueDate?: string | null;
+  notes?: string | null;
+  createdById?: string | null;
+  createdBy?: {
+    id: string;
+    name: string;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+  items?: CreditBillItemDTO[];
+  payments?: CreditPaymentDTO[];
+  adjustments?: CreditAdjustmentDTO[];
+}
+
+export interface CreditPaymentDTO {
+  id: string;
+  receiptNumber: string;
+  accountId: string;
+  billId?: string | null;
+  bill?: {
+    id: string;
+    billNumber: string;
+  } | null;
+  customer?: {
+    id: string;
+    fullName: string;
+  } | null;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  previousBalance: number;
+  remainingBalance: number;
+  notes?: string | null;
+  referenceNumber?: string | null;
+  recordedById?: string | null;
+  recordedBy?: {
+    id: string;
+    name: string;
+  } | null;
+  createdAt: string;
+}
+
+export interface CreditLedgerEntryDTO {
+  id: string;
+  accountId: string;
+  type: CreditLedgerType;
+  amount: number;
+  debit: number;
+  credit: number;
+  runningBalance: number;
+  description: string;
+  referenceId?: string | null;
+  referenceNumber?: string | null;
+  createdById?: string | null;
+  createdBy?: {
+    id: string;
+    name: string;
+  } | null;
+  createdAt: string;
+}
+
+export interface CreditAdjustmentDTO {
+  id: string;
+  accountId: string;
+  billId?: string | null;
+  amount: number;
+  reason: string;
+  oldTotal: number;
+  newTotal: number;
+  createdById?: string | null;
+  createdBy?: {
+    id: string;
+    name: string;
+  } | null;
+  createdAt: string;
+}
+
+export interface CreditDashboardMetricsDTO {
+  totalOutstandingCredit: number;
+  totalCreditCharges: number;
+  totalPaymentsCollected: number;
+  totalAccountsCount: number;
+  pendingPurchasesCount: number;
+  partiallyPaidPurchasesCount: number;
+  fullyPaidPurchasesCount: number;
+  paymentsCollectedToday: number;
+  paymentsCollectedThisMonth: number;
+  recentPurchases: CreditBillDTO[];
+  recentPayments: CreditPaymentDTO[];
+  topDebtors: {
+    id: string;
+    customerId: string;
+    customerName: string;
+    contactNumber: string;
+    currentBalance: number;
+    pendingBillsCount: number;
+    lastPaymentDate?: string | null;
+  }[];
+  recentAdjustments?: CreditAdjustmentDTO[];
+}
+
+

@@ -87,6 +87,10 @@ model User {
   expenses      Expense[]    @relation("ExpenseCreatedBy")
   auditLogs     AuditLog[]   @relation("UserAuditLogs")
   billItems     BillItem[]   @relation("BillItemCreatedBy")
+  creditBillsCreated CreditBill[]        @relation("CreditBillCreatedBy")
+  creditPayments     CreditPayment[]     @relation("CreditPaymentRecordedBy")
+  creditLedgers      CreditLedgerEntry[] @relation("CreditLedgerCreatedBy")
+  creditAdjustments  CreditAdjustment[]  @relation("CreditAdjustmentCreatedBy")
 
   @@index([email])
 }
@@ -119,6 +123,8 @@ model Customer {
   updatedAt           DateTime @updatedAt
 
   stays Stay[]
+  creditAccount CreditAccount?
+  creditBills   CreditBill[]
 
   @@index([fullName])
   @@index([contactNumber])
@@ -196,6 +202,8 @@ model ServiceItem {
   isActive     Boolean          @default(true)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
+
+  creditBillItems CreditBillItem[]
 
   @@index([category])
   @@index([categoryName])
@@ -354,4 +362,166 @@ model PaymentQr {
   @@index([isDefault])
   @@index([isActive])
 }
+
+enum CreditAccountStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+}
+
+enum CreditBillStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+enum CreditLedgerType {
+  CHARGE
+  PAYMENT
+  ADJUSTMENT
+  REFUND
+}
+
+model CreditAccount {
+  id             String              @id @default(cuid())
+  customerId     String              @unique
+  customer       Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  status         CreditAccountStatus @default(PAID)
+  creditLimit    Float?
+  totalCharged   Float               @default(0)
+  totalPaid      Float               @default(0)
+  currentBalance Float               @default(0)
+  notes          String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  bills          CreditBill[]
+  payments       CreditPayment[]
+  ledgerEntries  CreditLedgerEntry[]
+  adjustments    CreditAdjustment[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([currentBalance])
+}
+
+model CreditBill {
+  id            String           @id @default(cuid())
+  billNumber    String           @unique
+  accountId     String
+  account       CreditAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  customerId    String
+  customer      Customer         @relation(fields: [customerId], references: [id])
+  status        CreditBillStatus @default(PENDING)
+  subtotal      Float            @default(0)
+  discount      Float            @default(0)
+  tax           Float            @default(0)
+  serviceCharge Float            @default(0)
+  totalAmount   Float            @default(0)
+  paidAmount    Float            @default(0)
+  dueDate       DateTime?
+  notes         String?
+  createdById   String?
+  createdBy     User?            @relation("CreditBillCreatedBy", fields: [createdById], references: [id])
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  items         CreditBillItem[]
+  payments      CreditPayment[]
+  adjustments   CreditAdjustment[]
+
+  @@index([accountId])
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([dueDate])
+}
+
+model CreditBillItem {
+  id            String       @id @default(cuid())
+  billId        String
+  bill          CreditBill   @relation(fields: [billId], references: [id], onDelete: Cascade)
+  serviceItemId String?
+  serviceItem   ServiceItem? @relation(fields: [serviceItemId], references: [id], onDelete: SetNull)
+  name          String
+  category      String?
+  quantity      Int          @default(1)
+  unitPrice     Float
+  total         Float
+  originalPrice Float?
+  isCustom      Boolean      @default(false)
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([billId])
+  @@index([serviceItemId])
+}
+
+model CreditPayment {
+  id              String        @id @default(cuid())
+  receiptNumber   String        @unique
+  accountId       String
+  account         CreditAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  billId          String?
+  bill            CreditBill?   @relation(fields: [billId], references: [id], onDelete: SetNull)
+  amount          Float
+  paymentMethod   PaymentMethod @default(CASH)
+  previousBalance Float         @default(0)
+  remainingBalance Float        @default(0)
+  notes           String?
+  referenceNumber String?
+  idempotencyKey  String?       @unique
+  recordedById    String?
+  recordedBy      User?         @relation("CreditPaymentRecordedBy", fields: [recordedById], references: [id])
+  createdAt       DateTime      @default(now())
+
+  @@index([accountId])
+  @@index([billId])
+  @@index([createdAt])
+  @@index([paymentMethod])
+}
+
+model CreditLedgerEntry {
+  id              String           @id @default(cuid())
+  accountId       String
+  account         CreditAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  type            CreditLedgerType
+  amount          Float
+  debit           Float            @default(0)
+  credit          Float            @default(0)
+  runningBalance  Float
+  description     String
+  referenceId     String?
+  referenceNumber String?
+  createdById     String?
+  createdBy       User?            @relation("CreditLedgerCreatedBy", fields: [createdById], references: [id])
+  createdAt       DateTime         @default(now())
+
+  @@index([accountId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model CreditAdjustment {
+  id          String        @id @default(cuid())
+  accountId   String
+  account     CreditAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  billId      String?
+  bill        CreditBill?   @relation(fields: [billId], references: [id], onDelete: SetNull)
+  amount      Float
+  reason      String
+  oldTotal    Float
+  newTotal    Float
+  createdById String?
+  createdBy   User?         @relation("CreditAdjustmentCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime      @default(now())
+
+  @@index([accountId])
+  @@index([billId])
+  @@index([createdAt])
+}
+
 
