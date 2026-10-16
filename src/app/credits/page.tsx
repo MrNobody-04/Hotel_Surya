@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   CreditCard,
-  DollarSign,
+  Banknote,
   Plus,
   Search,
   Filter,
@@ -938,7 +938,7 @@ export default function CreditManagementPage() {
                         className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 h-9 shadow-sm"
                         disabled={selectedAccountDetails.currentBalance <= 0.01}
                       >
-                        <DollarSign className="w-4 h-4" />
+                        <Wallet className="w-4 h-4" />
                         Collect Payment
                       </Button>
 
@@ -1477,7 +1477,7 @@ export default function CreditManagementPage() {
                                       }}
                                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-8 text-xs gap-1"
                                     >
-                                      <DollarSign className="w-3 h-3" />
+                                      <Banknote className="w-3 h-3" />
                                       Pay
                                     </Button>
                                   )}

@@ -18,7 +18,6 @@ import {
   Plus,
   AlertCircle,
   Loader2,
-  DollarSign,
   AlertTriangle,
 } from "lucide-react";
 import { CreditBillDTO, CreditBillItemDTO } from "@/types";

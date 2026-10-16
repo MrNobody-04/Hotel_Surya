@@ -21,7 +21,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   CreditCard,
-  DollarSign,
+  CheckCircle2,
   AlertCircle,
   Loader2,
   Receipt,
@@ -134,227 +134,232 @@ export function RecordPaymentModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && !submitting && onClose()}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden sm:rounded-2xl shadow-2xl border-amber-500/20">
-        <DialogHeader className="p-5 sm:p-6 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-b">
+      <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[92vh] flex flex-col p-0 overflow-hidden sm:rounded-2xl shadow-2xl border-emerald-500/20">
+        <DialogHeader className="p-4 sm:p-5 shrink-0 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border-b">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-500 shadow-sm">
-              <DollarSign className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-sm shrink-0">
+              <Banknote className="w-5 h-5" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-bold">Collect Credit Payment</DialogTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <DialogTitle className="text-lg sm:text-xl font-bold">Collect Credit Payment</DialogTitle>
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
                 Record full or installment payment for {account.customer?.fullName}
               </p>
             </div>
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {error && (
-            <div className="p-3 text-sm rounded-xl bg-destructive/10 text-destructive border border-destructive/20 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 touch-pan-y">
+            {error && (
+              <div className="p-3 text-sm rounded-xl bg-destructive/10 text-destructive border border-destructive/20 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
 
-          {/* Account Balance Summary Card */}
-          <div className="grid grid-cols-2 gap-3 p-3.5 bg-muted/40 rounded-xl border">
-            <div>
-              <span className="text-xs text-muted-foreground block">Customer Name</span>
-              <span className="font-bold text-sm text-foreground">
-                {account.customer?.fullName}
-              </span>
-              <span className="text-xs text-muted-foreground block font-mono">
-                {account.customer?.contactNumber}
-              </span>
+            {/* Account Balance Summary Card */}
+            <div className="grid grid-cols-2 gap-3 p-3 bg-muted/40 rounded-xl border">
+              <div>
+                <span className="text-xs text-muted-foreground block">Customer Name</span>
+                <span className="font-bold text-sm text-foreground truncate block">
+                  {account.customer?.fullName}
+                </span>
+                {account.customer?.contactNumber && (
+                  <span className="text-xs text-muted-foreground block font-mono">
+                    {account.customer?.contactNumber}
+                  </span>
+                )}
+              </div>
+              <div className="text-right">
+                <span className="text-xs text-muted-foreground block">Current Balance</span>
+                <span className="font-mono font-black text-base sm:text-lg text-rose-500">
+                  Rs. {currentBalance.toLocaleString()}
+                </span>
+              </div>
             </div>
-            <div className="text-right">
-              <span className="text-xs text-muted-foreground block">Current Balance</span>
-              <span className="font-mono font-black text-lg text-rose-500">
-                Rs. {currentBalance.toLocaleString()}
-              </span>
-            </div>
-          </div>
 
-          {/* Target Bill (Optional) */}
-          {account.bills && account.bills.filter((b) => b.status !== "PAID").length > 0 && (
+            {/* Target Bill (Optional) */}
+            {account.bills && account.bills.filter((b) => b.status !== "PAID").length > 0 && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Payment Allocation</Label>
+                <Select value={selectedBillId} onValueChange={setSelectedBillId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select bill to allocate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">
+                      General Account (Auto-apply to Oldest Bills FIFO)
+                    </SelectItem>
+                    {account.bills
+                      .filter((b) => b.status !== "PAID")
+                      .map((b) => {
+                        const due = Math.max(0, b.totalAmount - b.paidAmount);
+                        return (
+                          <SelectItem key={b.id} value={b.id}>
+                            Bill #{b.billNumber} • Due: Rs. {due.toLocaleString()} (Total: Rs.{" "}
+                            {b.totalAmount.toLocaleString()})
+                          </SelectItem>
+                        );
+                      })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Payment Amount Input */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label className="text-xs font-semibold">Amount Paid (Rs.) *</Label>
+                <span className="text-xs text-muted-foreground font-mono">
+                  Max: Rs. {currentBalance.toLocaleString()}
+                </span>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">
+                  Rs.
+                </span>
+                <Input
+                  type="number"
+                  step="any"
+                  min="1"
+                  max={currentBalance}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="pl-12 font-mono text-lg font-bold h-11"
+                  required
+                />
+              </div>
+
+              {/* Quick Fill Preset Pills */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-7 px-2.5 rounded-lg border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-semibold"
+                  onClick={() => handleQuickAmount(currentBalance)}
+                >
+                  Full (Rs. {currentBalance})
+                </Button>
+                {currentBalance > 1000 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7 px-2.5 rounded-lg"
+                    onClick={() => handleQuickAmount(Math.round(currentBalance / 2))}
+                  >
+                    50% (Rs. {Math.round(currentBalance / 2)})
+                  </Button>
+                )}
+                {currentBalance >= 1000 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7 px-2.5 rounded-lg"
+                    onClick={() => handleQuickAmount(1000)}
+                  >
+                    Rs. 1,000
+                  </Button>
+                )}
+                {currentBalance >= 500 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7 px-2.5 rounded-lg"
+                    onClick={() => handleQuickAmount(500)}
+                  >
+                    Rs. 500
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Payment Method & Reference */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Payment Method *</Label>
+                <Select
+                  value={paymentMethod}
+                  onValueChange={(val: PaymentMethod) => setPaymentMethod(val)}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CASH">Cash Payment</SelectItem>
+                    <SelectItem value="QR_PAYMENT">Fonepay / QR Scan</SelectItem>
+                    <SelectItem value="BANK_TRANSFER">Bank Transfer / ConnectIPS</SelectItem>
+                    <SelectItem value="CARD">Debit / Credit Card</SelectItem>
+                    <SelectItem value="OTHER">Other Method</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Reference / Receipt # (Optional)</Label>
+                <Input
+                  value={referenceNumber}
+                  onChange={(e) => setReferenceNumber(e.target.value)}
+                  placeholder="Txn ID / Bank Ref"
+                  className="h-10"
+                />
+              </div>
+            </div>
+
+            {/* Notes */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Payment Allocation</Label>
-              <Select value={selectedBillId} onValueChange={setSelectedBillId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select bill to allocate" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">
-                    General Account (Auto-apply to Oldest Bills FIFO)
-                  </SelectItem>
-                  {account.bills
-                    .filter((b) => b.status !== "PAID")
-                    .map((b) => {
-                      const due = Math.max(0, b.totalAmount - b.paidAmount);
-                      return (
-                        <SelectItem key={b.id} value={b.id}>
-                          Bill #{b.billNumber} • Due: Rs. {due.toLocaleString()} (Total: Rs.{" "}
-                          {b.totalAmount.toLocaleString()})
-                        </SelectItem>
-                      );
-                    })}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Payment Amount Input */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label className="text-xs font-semibold">Amount to Pay (Rs.) *</Label>
-              <span className="text-xs text-muted-foreground font-mono">
-                Max: Rs. {currentBalance.toLocaleString()}
-              </span>
-            </div>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">
-                Rs.
-              </span>
-              <Input
-                type="number"
-                step="any"
-                min="1"
-                max={currentBalance}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className="pl-12 font-mono text-lg font-bold h-11"
-                required
+              <Label className="text-xs font-semibold">Remarks / Notes (Optional)</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Installment payment notes, handed over by, etc."
+                rows={1}
+                className="resize-none text-xs min-h-[38px]"
               />
             </div>
 
-            {/* Quick Fill Preset Pills */}
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="text-xs h-7 px-2.5 rounded-lg border-amber-500/30 text-amber-600 dark:text-amber-400 font-semibold"
-                onClick={() => handleQuickAmount(currentBalance)}
-              >
-                Full (Rs. {currentBalance})
-              </Button>
-              {currentBalance > 1000 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-7 px-2.5 rounded-lg"
-                  onClick={() => handleQuickAmount(Math.round(currentBalance / 2))}
+            {/* Balance Preview Indicator */}
+            <div className="p-3 bg-muted/60 rounded-xl border flex items-center justify-between text-xs">
+              <div>
+                <span className="text-muted-foreground block">Remaining Debt After Payment</span>
+                <span
+                  className={`font-mono font-bold text-base ${
+                    remainingBalance === 0 ? "text-emerald-500" : "text-amber-500"
+                  }`}
                 >
-                  50% (Rs. {Math.round(currentBalance / 2)})
-                </Button>
-              )}
-              {currentBalance >= 1000 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-7 px-2.5 rounded-lg"
-                  onClick={() => handleQuickAmount(1000)}
-                >
-                  Rs. 1,000
-                </Button>
-              )}
-              {currentBalance >= 500 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-7 px-2.5 rounded-lg"
-                  onClick={() => handleQuickAmount(500)}
-                >
-                  Rs. 500
-                </Button>
-              )}
+                  {remainingBalance === 0
+                    ? "Rs. 0 (Fully Paid!)"
+                    : `Rs. ${remainingBalance.toLocaleString()}`}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-muted-foreground block">Paying Now</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                  + Rs. {numAmount.toLocaleString()}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Payment Method & Reference */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Payment Method *</Label>
-              <Select
-                value={paymentMethod}
-                onValueChange={(val: PaymentMethod) => setPaymentMethod(val)}
-              >
-                <SelectTrigger className="h-10">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CASH">Cash Payment</SelectItem>
-                  <SelectItem value="QR_PAYMENT">Fonepay / QR Scan</SelectItem>
-                  <SelectItem value="BANK_TRANSFER">Bank Transfer / ConnectIPS</SelectItem>
-                  <SelectItem value="CARD">Debit / Credit Card</SelectItem>
-                  <SelectItem value="OTHER">Other Method</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Reference / Receipt # (Optional)</Label>
-              <Input
-                value={referenceNumber}
-                onChange={(e) => setReferenceNumber(e.target.value)}
-                placeholder="Txn ID / Bank Ref"
-                className="h-10"
-              />
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Remarks / Notes (Optional)</Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Installment payment notes, handed over by, etc."
-              rows={2}
-              className="resize-none text-xs"
-            />
-          </div>
-
-          {/* Balance Preview Indicator */}
-          <div className="p-3 bg-muted/60 rounded-xl border flex items-center justify-between text-xs">
-            <div>
-              <span className="text-muted-foreground block">Remaining Debt After Payment</span>
-              <span
-                className={`font-mono font-bold text-base ${
-                  remainingBalance === 0 ? "text-emerald-500" : "text-amber-500"
-                }`}
-              >
-                {remainingBalance === 0
-                  ? "Rs. 0 (Fully Paid!)"
-                  : `Rs. ${remainingBalance.toLocaleString()}`}
-              </span>
-            </div>
-            <div className="text-right">
-              <span className="text-muted-foreground block">Paying Now</span>
-              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                + Rs. {numAmount.toLocaleString()}
-              </span>
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t">
+          <DialogFooter className="shrink-0 p-3 sm:p-4 bg-muted/40 border-t flex flex-row items-center justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               disabled={submitting}
               onClick={onClose}
+              className="h-10 text-xs sm:text-sm"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={submitting || numAmount <= 0 || numAmount > currentBalance + 0.01}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 shadow-md"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 shadow-md h-10 text-xs sm:text-sm px-4 flex-1 sm:flex-initial"
             >
               {submitting ? (
                 <>
@@ -363,7 +368,7 @@ export function RecordPaymentModal({
                 </>
               ) : (
                 <>
-                  <DollarSign className="w-4 h-4" />
+                  <CheckCircle2 className="w-4 h-4" />
                   Confirm Payment (Rs. {numAmount.toLocaleString()})
                 </>
               )}
