@@ -6,8 +6,8 @@ import { logAuditEvent } from "@/server/services/audit.service";
 
 const customerSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
-  gender: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]),
-  contactNumber: z.string().min(5, "Contact number is required"),
+  gender: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]).optional().default("PREFER_NOT_TO_SAY"),
+  contactNumber: z.string().optional().nullable().transform((val) => val?.trim() || "N/A"),
   citizenshipNumber: z.string().optional().nullable(),
   citizenshipPhotoUrl: z.string().optional().nullable(),
   address: z.string().optional().nullable(),

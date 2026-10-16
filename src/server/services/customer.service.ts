@@ -3,10 +3,10 @@ import { Gender } from "@/types";
 
 export interface CreateCustomerInput {
   fullName: string;
-  gender: Gender;
+  gender?: Gender;
   citizenshipNumber?: string | null;
   citizenshipPhotoUrl?: string | null;
-  contactNumber: string;
+  contactNumber?: string | null;
   address?: string | null;
   notes?: string | null;
 }
@@ -66,17 +66,36 @@ export async function getCustomerById(id: string) {
 }
 
 export async function createCustomer(data: CreateCustomerInput) {
-  return prisma.customer.create({
+  const customer = await prisma.customer.create({
     data: {
       fullName: data.fullName.trim(),
-      gender: data.gender,
+      gender: data.gender || ("PREFER_NOT_TO_SAY" as any),
       citizenshipNumber: data.citizenshipNumber?.trim() || null,
       citizenshipPhotoUrl: data.citizenshipPhotoUrl || null,
-      contactNumber: data.contactNumber.trim(),
+      contactNumber: data.contactNumber?.trim() || "N/A",
       address: data.address?.trim() || null,
       notes: data.notes?.trim() || null,
     },
   });
+
+  // Automatically initialize a zero-balance credit account
+  try {
+    await prisma.creditAccount.upsert({
+      where: { customerId: customer.id },
+      update: {},
+      create: {
+        customerId: customer.id,
+        status: "PAID" as any,
+        currentBalance: 0,
+        totalCharged: 0,
+        totalPaid: 0,
+      },
+    });
+  } catch (e) {
+    // Non-fatal if already exists
+  }
+
+  return customer;
 }
 
 export async function updateCustomer(id: string, data: Partial<CreateCustomerInput>) {
@@ -87,7 +106,7 @@ export async function updateCustomer(id: string, data: Partial<CreateCustomerInp
       ...(data.gender && { gender: data.gender }),
       ...(data.citizenshipNumber !== undefined && { citizenshipNumber: data.citizenshipNumber?.trim() || null }),
       ...(data.citizenshipPhotoUrl !== undefined && { citizenshipPhotoUrl: data.citizenshipPhotoUrl }),
-      ...(data.contactNumber && { contactNumber: data.contactNumber.trim() }),
+      ...(data.contactNumber !== undefined && { contactNumber: data.contactNumber?.trim() || "N/A" }),
       ...(data.address !== undefined && { address: data.address?.trim() || null }),
       ...(data.notes !== undefined && { notes: data.notes?.trim() || null }),
     },
@@ -116,6 +135,14 @@ export async function deleteCustomer(id: string, userId: string, userName: strin
   }
 
   return await prisma.$transaction(async (tx) => {
+    // Delete any customer credit records safely
+    await tx.creditAdjustment.deleteMany({ where: { account: { customerId: id } } });
+    await tx.creditLedgerEntry.deleteMany({ where: { account: { customerId: id } } });
+    await tx.creditPayment.deleteMany({ where: { account: { customerId: id } } });
+    await tx.creditBillItem.deleteMany({ where: { bill: { customerId: id } } });
+    await tx.creditBill.deleteMany({ where: { customerId: id } });
+    await tx.creditAccount.deleteMany({ where: { customerId: id } });
+
     // Delete all historical stay records and related items for this customer
     for (const stay of customer.stays) {
       await tx.billItem.deleteMany({ where: { stayId: stay.id } });

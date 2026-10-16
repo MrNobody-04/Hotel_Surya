@@ -14,7 +14,7 @@ const createAccountSchema = z.object({
   newCustomer: z
     .object({
       fullName: z.string().min(2, "Full name must be at least 2 characters"),
-      contactNumber: z.string().min(5, "Contact number is required"),
+      contactNumber: z.string().optional().nullable().transform((val) => val?.trim() || "N/A"),
       citizenshipNumber: z.string().optional().nullable(),
       address: z.string().optional().nullable(),
       gender: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]).optional(),
@@ -75,18 +75,20 @@ export async function POST(request: Request) {
 
     // If new customer details provided, check duplicates or create
     if (!customerId && parsed.data.newCustomer) {
-      const existing = await prisma.customer.findFirst({
-        where: {
-          contactNumber: parsed.data.newCustomer.contactNumber.trim(),
-        },
-      });
+      const phone = parsed.data.newCustomer.contactNumber?.trim();
+      let existing = null;
+      if (phone && phone !== "N/A") {
+        existing = await prisma.customer.findFirst({
+          where: { contactNumber: phone },
+        });
+      }
 
       if (existing) {
         customerId = existing.id;
       } else {
         const created = await createCustomer({
           fullName: parsed.data.newCustomer.fullName.trim(),
-          contactNumber: parsed.data.newCustomer.contactNumber.trim(),
+          contactNumber: phone || "N/A",
           citizenshipNumber: parsed.data.newCustomer.citizenshipNumber?.trim() || null,
           address: parsed.data.newCustomer.address?.trim() || null,
           gender: parsed.data.newCustomer.gender || "PREFER_NOT_TO_SAY",

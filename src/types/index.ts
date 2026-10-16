@@ -271,6 +271,7 @@ export interface CreditAccountDTO {
   lastPaymentDate?: string | null;
   bills?: CreditBillDTO[];
   payments?: CreditPaymentDTO[];
+  ledgerEntries?: CreditLedgerEntryDTO[];
 }
 
 export interface CreditBillItemDTO {
