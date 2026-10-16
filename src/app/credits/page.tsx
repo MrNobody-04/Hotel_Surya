@@ -32,6 +32,7 @@ import {
   ShieldAlert,
   X,
   Minus,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,7 +98,7 @@ export default function CreditManagementPage() {
   const [purchaseSuccessMessage, setPurchaseSuccessMessage] = useState<string | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
-  // Menu catalog state
+  // Menu catalog state (Restaurant & Cabin Menu)
   const [menuItems, setMenuItems] = useState<ServiceItemDTO[]>([]);
   const [categories, setCategories] = useState<MenuCategoryDTO[]>([]);
   const [menuSearch, setMenuSearch] = useState<string>("");
@@ -163,7 +164,7 @@ export default function CreditManagementPage() {
       .catch(() => {});
   }, []);
 
-  // Fetch Accounts
+  // Fetch Credit Accounts (Only credit customers)
   const fetchAccounts = useCallback(async (selectTargetCustomerId?: string) => {
     try {
       setLoadingAccounts(true);
@@ -181,6 +182,9 @@ export default function CreditManagementPage() {
           }
         } else if (accs.length > 0 && !selectedAccountId) {
           setSelectedAccountId(accs[0].id);
+        } else if (accs.length === 0) {
+          setSelectedAccountId(null);
+          setSelectedAccountDetails(null);
         }
       }
     } catch (err) {
@@ -206,7 +210,7 @@ export default function CreditManagementPage() {
     }
   }, []);
 
-  // Fetch Menu Items & Categories for POS
+  // Fetch Menu Items & Categories from Restaurant and Cabin Catalog
   const fetchMenuCatalog = useCallback(async () => {
     try {
       const [menuRes, catRes] = await Promise.all([
@@ -215,12 +219,14 @@ export default function CreditManagementPage() {
       ]);
 
       if (menuRes.ok) {
-        const items = await menuRes.json();
-        setMenuItems(Array.isArray(items) ? items.filter((i) => i.isActive) : []);
+        const data = await menuRes.json();
+        const rawItems = Array.isArray(data) ? data : data.items || [];
+        setMenuItems(rawItems.filter((i: ServiceItemDTO) => i.isActive));
       }
       if (catRes.ok) {
-        const cats = await catRes.json();
-        setCategories(Array.isArray(cats) ? cats : []);
+        const data = await catRes.json();
+        const rawCats = Array.isArray(data) ? data : data.categories || [];
+        setCategories(rawCats);
       }
     } catch (err) {
       console.error("Error fetching menu catalog:", err);
@@ -298,16 +304,21 @@ export default function CreditManagementPage() {
     });
   }, [accounts, accountSearch, accountFilter]);
 
-  // Filtered Menu Items for Quick Adding
+  // Filtered Restaurant & Cabin Menu Items for Quick Adding
   const filteredMenuItems = useMemo(() => {
+    const q = menuSearch.toLowerCase().trim();
     return menuItems.filter((item) => {
       const matchesSearch =
-        !menuSearch.trim() ||
-        item.name.toLowerCase().includes(menuSearch.toLowerCase());
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        (item.categoryName && item.categoryName.toLowerCase().includes(q)) ||
+        (item.category && item.category.toLowerCase().includes(q));
+
+      const itemCategory = (item.categoryName || item.category || "").toLowerCase();
       const matchesCategory =
         selectedCategory === "ALL" ||
-        (item.categoryName && item.categoryName === selectedCategory) ||
-        item.category === selectedCategory;
+        itemCategory === selectedCategory.toLowerCase();
+
       return matchesSearch && matchesCategory;
     });
   }, [menuItems, menuSearch, selectedCategory]);
@@ -399,7 +410,7 @@ export default function CreditManagementPage() {
       return;
     }
     if (orderTray.length === 0) {
-      setPurchaseError("Please add at least one item to the credit bill.");
+      setPurchaseError("Please add at least one item from the menu to the credit bill.");
       return;
     }
 
@@ -424,7 +435,7 @@ export default function CreditManagementPage() {
       if (!res.ok) throw new Error(data.error || "Failed to create credit bill");
 
       setPurchaseSuccessMessage(
-        `Credit bill #${data.bill.billNumber} (Rs. ${trayTotal.toLocaleString()}) saved successfully!`
+        `Credit bill #${data.bill.billNumber} (Rs. ${trayTotal.toLocaleString()}) saved successfully to ${selectedAccountDetails.customer?.fullName}!`
       );
 
       // Reset tray
@@ -444,7 +455,7 @@ export default function CreditManagementPage() {
     }
   };
 
-  // Create New Customer (Name Compulsory, Phone Optional)
+  // Create New Customer (Name Compulsory, Phone Optional) -> Creates Credit Account Immediately
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCustomerName.trim()) {
@@ -456,14 +467,16 @@ export default function CreditManagementPage() {
       setCreatingCustomer(true);
       setNewCustomerError(null);
 
-      const res = await fetch("/api/customers", {
+      const res = await fetch("/api/credits/accounts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName: newCustomerName.trim(),
-          contactNumber: newCustomerPhone.trim() || "N/A",
-          address: newCustomerAddress.trim() || null,
-          gender: "PREFER_NOT_TO_SAY",
+          newCustomer: {
+            fullName: newCustomerName.trim(),
+            contactNumber: newCustomerPhone.trim() || "N/A",
+            address: newCustomerAddress.trim() || null,
+            gender: "PREFER_NOT_TO_SAY",
+          },
         }),
       });
 
@@ -476,8 +489,15 @@ export default function CreditManagementPage() {
       setNewCustomerAddress("");
       setNewCustomerModalOpen(false);
 
-      // Refresh accounts list and select the new customer
-      await fetchAccounts(data.customer.id);
+      // Select newly created credit account immediately
+      if (data.account?.id) {
+        setSelectedAccountId(data.account.id);
+        setShowMobileWorkspace(true);
+        await fetchAccounts(data.account.customerId);
+        await fetchAccountDetails(data.account.id);
+      } else {
+        await fetchAccounts();
+      }
     } catch (err: any) {
       setNewCustomerError(err.message || "Failed to create customer");
     } finally {
@@ -536,11 +556,11 @@ export default function CreditManagementPage() {
                   variant="outline"
                   className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 font-semibold text-[11px]"
                 >
-                  Accounts & POS
+                  Customer Desk
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Simple customer credit billing, quick dish addition, payment collection & history
+                Manage credit customers, bill directly from restaurant & cabin menu, collect payments & track history
               </p>
             </div>
           </div>
@@ -584,6 +604,7 @@ export default function CreditManagementPage() {
                 fetchAccounts();
                 if (selectedAccountId) fetchAccountDetails(selectedAccountId);
                 fetchSummaryData();
+                fetchMenuCatalog();
               }}
               className="text-xs gap-1.5 h-8 sm:h-9"
               title="Refresh records"
@@ -604,7 +625,7 @@ export default function CreditManagementPage() {
               }}
             >
               <UserPlus className="w-4 h-4" />
-              New Customer
+              + New Customer
             </Button>
           </div>
         </div>
@@ -665,7 +686,7 @@ export default function CreditManagementPage() {
                       : "bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20"
                   }`}
                 >
-                  With Debt ({accounts.filter((a) => a.currentBalance > 0.01).length})
+                  With Due ({accounts.filter((a) => a.currentBalance > 0.01).length})
                 </button>
                 <button
                   type="button"
@@ -686,30 +707,34 @@ export default function CreditManagementPage() {
               {loadingAccounts ? (
                 <div className="p-8 text-center text-xs text-muted-foreground">
                   <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-500" />
-                  Loading customers...
+                  Loading credit customers...
                 </div>
               ) : filteredAccounts.length === 0 ? (
                 <div className="p-8 text-center space-y-3">
                   <Users className="w-8 h-8 mx-auto text-muted-foreground/40" />
-                  <p className="text-xs text-muted-foreground">No customers found</p>
+                  <div>
+                    <p className="text-xs font-bold text-foreground">No credit customers yet</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Create your first credit customer (e.g. Ravi) to start billing
+                    </p>
+                  </div>
                   <Button
                     size="sm"
-                    variant="outline"
                     onClick={() => {
                       setNewCustomerError(null);
                       setNewCustomerModalOpen(true);
                     }}
-                    className="text-xs gap-1.5 h-8"
+                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs gap-1.5 h-8"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    Create New Customer
+                    + Add New Customer
                   </Button>
                 </div>
               ) : (
                 filteredAccounts.map((account) => {
                   const isSelected = selectedAccountId === account.id;
                   const hasDebt = account.currentBalance > 0.01;
-                  const customerName = account.customer?.fullName || "Unnamed Customer";
+                  const customerName = account.customer?.fullName || "Customer";
                   const contact = account.customer?.contactNumber;
                   const hasPhone = contact && contact !== "N/A";
 
@@ -740,11 +765,9 @@ export default function CreditManagementPage() {
 
                         {/* Customer Info */}
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-bold text-xs sm:text-sm text-foreground truncate block">
-                              {customerName}
-                            </span>
-                          </div>
+                          <span className="font-bold text-xs sm:text-sm text-foreground truncate block">
+                            {customerName}
+                          </span>
 
                           <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
                             {hasPhone ? (
@@ -823,10 +846,10 @@ export default function CreditManagementPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-foreground">
-                    Select a Customer to Start Billing
+                    Select or Create a Customer
                   </h3>
                   <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                    Pick a customer from the left list or create a new customer to add items to their credit bill, record payments, or view history.
+                    Pick a customer from the left list or create a new customer to add items from the restaurant & cabin menu, collect payments, or view history.
                   </p>
                 </div>
                 <Button
@@ -856,118 +879,166 @@ export default function CreditManagementPage() {
                   </Button>
                 </div>
 
-                {/* Customer Info & Debt Summary Card */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-card border shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2.5 flex-wrap">
-                      <h2 className="text-lg sm:text-xl font-black text-foreground tracking-tight">
-                        {selectedAccountDetails.customer?.fullName}
-                      </h2>
-                      {selectedAccountDetails.currentBalance > 0.01 ? (
-                        <Badge
-                          variant="outline"
-                          className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 text-xs font-bold"
-                        >
-                          Outstanding Debt
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs font-semibold"
-                        >
-                          All Settled
-                        </Badge>
-                      )}
+                {/* =================================================================
+                    CUSTOMER HEADER & 3-CARD STATS RIBBON (DUE, PAID, REMAINING)
+                ================================================================= */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-card border shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+                          {selectedAccountDetails.customer?.fullName}
+                        </h2>
+                        {selectedAccountDetails.currentBalance > 0.01 ? (
+                          <Badge
+                            variant="outline"
+                            className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 text-xs font-bold"
+                          >
+                            Active Due
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs font-semibold"
+                          >
+                            All Settled
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                        {selectedAccountDetails.customer?.contactNumber &&
+                        selectedAccountDetails.customer.contactNumber !== "N/A" ? (
+                          <span className="flex items-center gap-1 font-mono">
+                            <Phone className="w-3.5 h-3.5 text-muted-foreground/70" />
+                            {selectedAccountDetails.customer.contactNumber}
+                          </span>
+                        ) : (
+                          <span className="italic text-muted-foreground/60">No contact number</span>
+                        )}
+
+                        {selectedAccountDetails.customer?.address && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-muted-foreground/70" />
+                            {selectedAccountDetails.customer.address}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                      {selectedAccountDetails.customer?.contactNumber &&
-                      selectedAccountDetails.customer.contactNumber !== "N/A" ? (
-                        <span className="flex items-center gap-1 font-mono">
-                          <Phone className="w-3.5 h-3.5 text-muted-foreground/70" />
-                          {selectedAccountDetails.customer.contactNumber}
-                        </span>
-                      ) : (
-                        <span className="italic text-muted-foreground/60">No contact number</span>
-                      )}
+                    {/* Direct Quick Actions */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setPaymentModalAccount(selectedAccountDetails);
+                          setPaymentModalTargetBill(null);
+                          setPaymentModalOpen(true);
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 h-9 shadow-sm"
+                        disabled={selectedAccountDetails.currentBalance <= 0.01}
+                      >
+                        <DollarSign className="w-4 h-4" />
+                        Collect Payment
+                      </Button>
 
-                      {selectedAccountDetails.customer?.address && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-muted-foreground/70" />
-                          {selectedAccountDetails.customer.address}
-                        </span>
-                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setLedgerModalAccount(selectedAccountDetails);
+                          setLedgerModalOpen(true);
+                        }}
+                        className="text-xs gap-1.5 h-9"
+                      >
+                        <BookOpen className="w-4 h-4" />
+                        Ledger
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setDeleteError(null);
+                          setCustomerToDelete({
+                            id: selectedAccountDetails.customerId,
+                            name: selectedAccountDetails.customer?.fullName || "Customer",
+                          });
+                        }}
+                        className="text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 gap-1.5 h-9"
+                        title="Delete customer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete
+                      </Button>
                     </div>
                   </div>
 
-                  {/* Balance Display & Primary Actions */}
-                  <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-                    <div className="bg-muted/40 border rounded-xl px-4 py-2 text-right min-w-[130px]">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
-                        Outstanding Balance
+                  {/* 3 Prominent Stat Blocks: DUE, PAID, REMAINING */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t">
+                    {/* Stat 1: Total Due / Charged */}
+                    <div className="p-3.5 rounded-xl bg-muted/40 border">
+                      <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                        Total Due / Billed
+                      </span>
+                      <span className="text-xl sm:text-2xl font-black font-mono text-foreground mt-1 block">
+                        Rs. {(selectedAccountDetails.totalCharged || 0).toLocaleString()}
+                      </span>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Total credit orders to date
+                      </p>
+                    </div>
+
+                    {/* Stat 2: Paid Amount */}
+                    <div className="p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                      <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
+                        Paid Amount
+                      </span>
+                      <span className="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1 block">
+                        Rs. {(selectedAccountDetails.totalPaid || 0).toLocaleString()}
+                      </span>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Cash & online payments collected
+                      </p>
+                    </div>
+
+                    {/* Stat 3: Remaining Amount */}
+                    <div
+                      className={`p-3.5 rounded-xl border ${
+                        selectedAccountDetails.currentBalance > 0.01
+                          ? "bg-rose-500/5 border-rose-500/30"
+                          : "bg-muted/40"
+                      }`}
+                    >
+                      <span
+                        className={`text-[11px] font-semibold uppercase tracking-wider block ${
+                          selectedAccountDetails.currentBalance > 0.01
+                            ? "text-rose-600 dark:text-rose-400"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        Remaining Due
                       </span>
                       <span
-                        className={`text-lg sm:text-xl font-black font-mono block ${
+                        className={`text-xl sm:text-2xl font-black font-mono mt-1 block ${
                           selectedAccountDetails.currentBalance > 0.01
                             ? "text-rose-600 dark:text-rose-400"
                             : "text-emerald-600 dark:text-emerald-400"
                         }`}
                       >
-                        Rs. {selectedAccountDetails.currentBalance.toLocaleString()}
+                        Rs. {(selectedAccountDetails.currentBalance || 0).toLocaleString()}
                       </span>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {selectedAccountDetails.currentBalance > 0.01
+                          ? "Active outstanding debt"
+                          : "Account fully settled"}
+                      </p>
                     </div>
-
-                    {/* Action: Collect Payment */}
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setPaymentModalAccount(selectedAccountDetails);
-                        setPaymentModalTargetBill(null);
-                        setPaymentModalOpen(true);
-                      }}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 h-10 shadow-sm"
-                      disabled={selectedAccountDetails.currentBalance <= 0.01}
-                    >
-                      <DollarSign className="w-4 h-4" />
-                      Collect Payment
-                    </Button>
-
-                    {/* Action: View Ledger */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setLedgerModalAccount(selectedAccountDetails);
-                        setLedgerModalOpen(true);
-                      }}
-                      className="text-xs gap-1.5 h-10"
-                    >
-                      <BookOpen className="w-4 h-4" />
-                      Ledger
-                    </Button>
-
-                    {/* Action: Delete Customer */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setDeleteError(null);
-                        setCustomerToDelete({
-                          id: selectedAccountDetails.customerId,
-                          name: selectedAccountDetails.customer?.fullName || "Customer",
-                        });
-                      }}
-                      className="text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 gap-1.5 h-10"
-                      title="Delete customer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </Button>
                   </div>
                 </div>
 
                 {/* =================================================================
-                    SECTION 1: ADD ITEMS TO CREDIT BILL
+                    SECTION 1: ADD ITEMS TO CREDIT BILL (Restaurant & Cabin Menu)
                 ================================================================= */}
                 <div className="p-4 sm:p-5 rounded-2xl bg-card border shadow-sm space-y-4">
                   <div className="flex items-center justify-between pb-2 border-b">
@@ -977,7 +1048,7 @@ export default function CreditManagementPage() {
                         Add Items to Credit Bill
                       </h3>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Pick dishes from the menu or add custom items to bill to this customer
+                        Select from Restaurant & Cabin menu ({menuItems.length} items) or add custom items to {selectedAccountDetails.customer?.fullName}&apos;s bill
                       </p>
                     </div>
 
@@ -998,20 +1069,20 @@ export default function CreditManagementPage() {
                   </div>
 
                   {/* Menu Dish Quick Search & Categories */}
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     <div className="flex items-center gap-2">
                       <div className="relative flex-1">
                         <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                          placeholder="Quick search dishes (e.g. momo, chowmein, beer, coffee)..."
+                          placeholder="Search menu dishes (e.g. momo, chowmein, fried rice, beer, tea)..."
                           value={menuSearch}
                           onChange={(e) => setMenuSearch(e.target.value)}
-                          className="pl-8 text-xs h-8 bg-background"
+                          className="pl-8 text-xs h-9 bg-background"
                         />
                         {menuSearch && (
                           <button
                             onClick={() => setMenuSearch("")}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -1024,22 +1095,22 @@ export default function CreditManagementPage() {
                       <button
                         type="button"
                         onClick={() => setSelectedCategory("ALL")}
-                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap transition-all ${
+                        className={`px-3 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
                           selectedCategory === "ALL"
-                            ? "bg-amber-500 text-slate-950 font-bold"
+                            ? "bg-amber-500 text-slate-950 font-bold shadow-xs"
                             : "bg-muted text-muted-foreground hover:bg-muted/80"
                         }`}
                       >
-                        All Items
+                        All Items ({menuItems.length})
                       </button>
                       {categories.map((cat) => (
                         <button
                           key={cat.id}
                           type="button"
                           onClick={() => setSelectedCategory(cat.name)}
-                          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap transition-all ${
-                            selectedCategory === cat.name
-                              ? "bg-amber-500 text-slate-950 font-bold"
+                          className={`px-3 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
+                            selectedCategory.toLowerCase() === cat.name.toLowerCase()
+                              ? "bg-amber-500 text-slate-950 font-bold shadow-xs"
                               : "bg-muted text-muted-foreground hover:bg-muted/80"
                           }`}
                         >
@@ -1048,11 +1119,11 @@ export default function CreditManagementPage() {
                       ))}
                     </div>
 
-                    {/* Quick Dish Selection Chips Grid */}
-                    <div className="max-h-48 overflow-y-auto p-2 rounded-xl bg-muted/20 border grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {/* Quick Dish Selection Grid */}
+                    <div className="max-h-56 overflow-y-auto p-2.5 rounded-xl bg-muted/20 border grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                       {filteredMenuItems.length === 0 ? (
-                        <div className="col-span-full py-4 text-center text-xs text-muted-foreground">
-                          No menu items found. You can add a custom item above.
+                        <div className="col-span-full py-6 text-center text-xs text-muted-foreground">
+                          No menu items matching &quot;{menuSearch}&quot;. You can use &quot;+ Custom Item&quot; to add anything off-menu.
                         </div>
                       ) : (
                         filteredMenuItems.map((item) => (
@@ -1060,14 +1131,14 @@ export default function CreditManagementPage() {
                             key={item.id}
                             type="button"
                             onClick={() => handleAddToTray(item)}
-                            className="p-2 rounded-lg bg-card border hover:border-amber-500/50 hover:bg-amber-500/5 text-left transition-all flex flex-col justify-between shadow-2xs group"
+                            className="p-2.5 rounded-xl bg-card border hover:border-amber-500/50 hover:bg-amber-500/5 text-left transition-all flex flex-col justify-between shadow-2xs group cursor-pointer active:scale-98"
                           >
                             <span className="font-bold text-xs text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 line-clamp-1">
                               {item.name}
                             </span>
                             <div className="flex items-center justify-between mt-1 text-[11px]">
-                              <span className="text-muted-foreground text-[10px]">
-                                {item.categoryName || item.category || "Item"}
+                              <span className="text-muted-foreground text-[10px] truncate max-w-[80px]">
+                                {item.categoryName || item.category || "Menu"}
                               </span>
                               <span className="font-bold font-mono text-emerald-600 dark:text-emerald-400">
                                 Rs. {item.defaultPrice}
@@ -1096,7 +1167,7 @@ export default function CreditManagementPage() {
 
                     {orderTray.length === 0 ? (
                       <div className="p-6 text-center text-xs text-muted-foreground">
-                        No items added yet. Click dishes above or use &quot;+ Custom Item&quot; to add items to this bill.
+                        No dishes selected yet. Click any dish from the menu above or use &quot;+ Custom Item&quot; to add to this bill.
                       </div>
                     ) : (
                       <div className="divide-y divide-border/60">
@@ -1214,7 +1285,7 @@ export default function CreditManagementPage() {
                             <Input
                               value={purchaseNotes}
                               onChange={(e) => setPurchaseNotes(e.target.value)}
-                              placeholder="e.g. Dinner with family"
+                              placeholder="e.g. Dinner with friends"
                               className="h-8 text-xs mt-1"
                             />
                           </div>
@@ -1839,10 +1910,10 @@ export default function CreditManagementPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <UserPlus className="w-5 h-5 text-amber-500" />
-              Create New Customer
+              Create Credit Customer
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Add a customer profile. Name is compulsory, phone number is optional.
+              Add a customer profile for credit billing. Full Name is compulsory, Phone Number is optional.
             </DialogDescription>
           </DialogHeader>
 
@@ -1860,7 +1931,7 @@ export default function CreditManagementPage() {
               </Label>
               <Input
                 autoFocus
-                placeholder="e.g. Ram Bahadur Sharma"
+                placeholder="e.g. Ravi"
                 value={newCustomerName}
                 onChange={(e) => setNewCustomerName(e.target.value)}
                 className="text-xs h-9"
@@ -1885,7 +1956,7 @@ export default function CreditManagementPage() {
                 Address / Location <span className="text-muted-foreground font-normal">(Optional)</span>
               </Label>
               <Input
-                placeholder="e.g. Tansen-4, Palpa"
+                placeholder="e.g. Tansen, Palpa"
                 value={newCustomerAddress}
                 onChange={(e) => setNewCustomerAddress(e.target.value)}
                 className="text-xs h-9"
@@ -1936,7 +2007,7 @@ export default function CreditManagementPage() {
 
           <div className="py-2 space-y-2 text-xs text-muted-foreground">
             <p>
-              This will permanently delete this customer profile and clean up any attached credit records and history.
+              This will permanently delete this customer profile and clean up their credit records.
             </p>
             {deleteError && (
               <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">

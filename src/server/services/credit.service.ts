@@ -863,6 +863,16 @@ export async function searchCreditAccounts(params: {
     };
   }
 
+  // Strictly exclude room stay guests with no credit activity from customer credit desk
+  where.NOT = {
+    AND: [
+      { totalCharged: 0 },
+      { totalPaid: 0 },
+      { bills: { none: {} } },
+      { customer: { stays: { some: {} } } },
+    ],
+  };
+
   const [accounts, total] = await Promise.all([
     prisma.creditAccount.findMany({
       where,

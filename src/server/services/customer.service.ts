@@ -78,23 +78,6 @@ export async function createCustomer(data: CreateCustomerInput) {
     },
   });
 
-  // Automatically initialize a zero-balance credit account
-  try {
-    await prisma.creditAccount.upsert({
-      where: { customerId: customer.id },
-      update: {},
-      create: {
-        customerId: customer.id,
-        status: "PAID" as any,
-        currentBalance: 0,
-        totalCharged: 0,
-        totalPaid: 0,
-      },
-    });
-  } catch (e) {
-    // Non-fatal if already exists
-  }
-
   return customer;
 }
 

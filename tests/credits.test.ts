@@ -219,4 +219,48 @@ describe("Financial Analytics & Revenue Invariants", () => {
     // 3000 + 1500 - 2000 + 500 - 1500 = 1500
     expect(runningBalance).toBe(1500);
   });
+
+  it("handles multi-day purchases for a customer with due, paid, and remaining balance tracking", () => {
+    // Initial state: customer Ravi created with zero debt
+    let totalCharged = 0;
+    let totalPaid = 0;
+    let currentBalance = 0;
+
+    // Day 1: Ravi orders 2 plates of Momo @ Rs. 240
+    const day1Charge = 2 * 240; // 480
+    totalCharged += day1Charge;
+    currentBalance = totalCharged - totalPaid;
+
+    expect(totalCharged).toBe(480);
+    expect(totalPaid).toBe(0);
+    expect(currentBalance).toBe(480);
+
+    // Day 2: Ravi orders 1 Chicken Fried Rice @ Rs. 220
+    const day2Charge = 220;
+    totalCharged += day2Charge;
+    currentBalance = totalCharged - totalPaid;
+
+    expect(totalCharged).toBe(700);
+    expect(totalPaid).toBe(0);
+    expect(currentBalance).toBe(700);
+
+    // Day 3: Ravi pays Rs. 500 towards his debt
+    const payment = 500;
+    totalPaid += payment;
+    currentBalance = totalCharged - totalPaid;
+
+    expect(totalCharged).toBe(700);
+    expect(totalPaid).toBe(500);
+    expect(currentBalance).toBe(200);
+
+    // Day 4: Ravi orders 2 Cokes @ Rs. 70
+    const day4Charge = 2 * 70; // 140
+    totalCharged += day4Charge;
+    currentBalance = totalCharged - totalPaid;
+
+    expect(totalCharged).toBe(840);
+    expect(totalPaid).toBe(500);
+    expect(currentBalance).toBe(340);
+  });
 });
+
