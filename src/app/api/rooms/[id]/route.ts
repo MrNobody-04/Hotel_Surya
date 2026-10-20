@@ -66,22 +66,36 @@ export async function DELETE(
     const user = await requireRole(["OWNER"]);
     const { id } = await params;
 
-    const stayCount = await prisma.stay.count({
-      where: { roomId: id },
+    const activeStayCount = await prisma.stay.count({
+      where: { roomId: id, status: "ACTIVE" },
     });
-    if (stayCount > 0) {
+    if (activeStayCount > 0) {
       return NextResponse.json(
         {
           error:
-            "Cannot delete a room that has stay records in history. You can mark it as MAINTENANCE instead.",
+            "Cannot delete a room that currently has an active guest. Please check out the guest first.",
         },
         { status: 400 }
       );
     }
 
-    const room = await prisma.room.delete({
-      where: { id },
+    const totalStays = await prisma.stay.count({
+      where: { roomId: id },
     });
+
+    let room;
+    if (totalStays > 0) {
+      // Soft-delete to preserve all historical stay records, bills, payments & accounting integrity
+      room = await prisma.room.update({
+        where: { id },
+        data: { isArchived: true, status: "MAINTENANCE" },
+      });
+    } else {
+      // Hard delete if never used
+      room = await prisma.room.delete({
+        where: { id },
+      });
+    }
 
     await logAuditEvent({
       userId: user.id,
@@ -89,7 +103,7 @@ export async function DELETE(
       action: "ROOM_DELETED",
       entity: "Room",
       entityId: id,
-      metadata: { roomNumber: room.roomNumber },
+      metadata: { roomNumber: room.roomNumber, archived: totalStays > 0 },
     });
 
     return NextResponse.json({ success: true, room });

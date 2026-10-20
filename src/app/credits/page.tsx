@@ -47,6 +47,14 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
 import { RecordPaymentModal } from "@/components/credits/record-payment-modal";
 import { EditBillModal } from "@/components/credits/edit-bill-modal";
 import { CustomerLedgerModal } from "@/components/credits/customer-ledger-modal";
@@ -97,6 +105,10 @@ export default function CreditManagementPage() {
   const [submittingPurchase, setSubmittingPurchase] = useState<boolean>(false);
   const [purchaseSuccessMessage, setPurchaseSuccessMessage] = useState<string | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+
+  // Billing Target Mode: "NEW_BILL" vs "EXISTING_BILL"
+  const [billingTargetMode, setBillingTargetMode] = useState<"NEW_BILL" | "EXISTING_BILL">("NEW_BILL");
+  const [targetExistingBillId, setTargetExistingBillId] = useState<string>("");
 
   // Menu catalog state (Restaurant & Cabin Menu)
   const [menuItems, setMenuItems] = useState<ServiceItemDTO[]>([]);
@@ -391,6 +403,13 @@ export default function CreditManagementPage() {
     setCustomItemModalOpen(false);
   };
 
+  // Filter pending / unpaid bills for selected customer to allow adding to existing bills
+  const unpaidBills = useMemo(() => {
+    return (selectedAccountDetails?.bills || []).filter(
+      (b) => b.status !== "PAID" && b.status !== "CANCELLED"
+    );
+  }, [selectedAccountDetails]);
+
   // Tray calculations
   const traySubtotal = useMemo(() => {
     return (
@@ -419,24 +438,51 @@ export default function CreditManagementPage() {
       setPurchaseError(null);
       setPurchaseSuccessMessage(null);
 
-      const res = await fetch("/api/credits/bills", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: selectedAccountDetails.customerId,
-          items: orderTray,
-          discount: numDiscount,
-          dueDate: purchaseDueDate || null,
-          notes: purchaseNotes.trim() || null,
-        }),
-      });
+      if (billingTargetMode === "EXISTING_BILL") {
+        if (!targetExistingBillId) {
+          setPurchaseError("Please select an existing bill to add items to.");
+          return;
+        }
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create credit bill");
+        const res = await fetch(`/api/credits/bills/${targetExistingBillId}/items`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: orderTray,
+          }),
+        });
 
-      setPurchaseSuccessMessage(
-        `Credit bill #${data.bill.billNumber} (Rs. ${trayTotal.toLocaleString()}) saved successfully to ${selectedAccountDetails.customer?.fullName}!`
-      );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to add items to credit bill");
+
+        const targetBillObj = unpaidBills.find((b) => b.id === targetExistingBillId);
+        const billNum = targetBillObj?.billNumber || data.bill?.billNumber || "";
+
+        setPurchaseSuccessMessage(
+          `Successfully added ${orderTray.length} item(s) (Rs. ${trayTotal.toLocaleString()}) directly to Bill #${billNum} for ${selectedAccountDetails.customer?.fullName}!`
+        );
+        toast.success(`Items added to Bill #${billNum}`);
+      } else {
+        const res = await fetch("/api/credits/bills", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerId: selectedAccountDetails.customerId,
+            items: orderTray,
+            discount: numDiscount,
+            dueDate: purchaseDueDate || null,
+            notes: purchaseNotes.trim() || null,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to create credit bill");
+
+        setPurchaseSuccessMessage(
+          `New credit bill #${data.bill.billNumber} (Rs. ${trayTotal.toLocaleString()}) saved successfully to ${selectedAccountDetails.customer?.fullName}!`
+        );
+        toast.success(`New credit bill #${data.bill.billNumber} created`);
+      }
 
       // Reset tray
       setOrderTray([]);
@@ -931,6 +977,19 @@ export default function CreditManagementPage() {
                       <Button
                         size="sm"
                         onClick={() => {
+                          setBillingTargetMode("NEW_BILL");
+                          const el = document.getElementById("order-menu-section");
+                          el?.scrollIntoView({ behavior: "smooth" });
+                        }}
+                        className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs gap-1.5 h-9 shadow-sm"
+                      >
+                        <Plus className="w-4 h-4" />
+                        + New Bill
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        onClick={() => {
                           setPaymentModalAccount(selectedAccountDetails);
                           setPaymentModalTargetBill(null);
                           setPaymentModalOpen(true);
@@ -1040,7 +1099,7 @@ export default function CreditManagementPage() {
                 {/* =================================================================
                     SECTION 1: ADD ITEMS TO CREDIT BILL (Restaurant & Cabin Menu)
                 ================================================================= */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-card border shadow-sm space-y-4">
+                <div id="order-menu-section" className="p-4 sm:p-5 rounded-2xl bg-card border shadow-sm space-y-4">
                   <div className="flex items-center justify-between pb-2 border-b">
                     <div>
                       <h3 className="font-bold text-sm sm:text-base text-foreground flex items-center gap-2">
@@ -1066,6 +1125,73 @@ export default function CreditManagementPage() {
                       <Plus className="w-3.5 h-3.5" />
                       + Custom Item
                     </Button>
+                  </div>
+
+                  {/* Billing Target Selector: Create New Bill vs Add to Existing Bill */}
+                  <div className="p-3 bg-muted/40 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-foreground">Billing Option:</span>
+                      <div className="flex items-center gap-1 bg-background p-0.5 rounded-lg border">
+                        <button
+                          type="button"
+                          onClick={() => setBillingTargetMode("NEW_BILL")}
+                          className={`px-3 py-1 rounded-md font-bold transition-all ${
+                            billingTargetMode === "NEW_BILL"
+                              ? "bg-amber-500 text-slate-950 shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          + New Credit Bill
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (unpaidBills.length > 0) {
+                              setBillingTargetMode("EXISTING_BILL");
+                              if (!targetExistingBillId || !unpaidBills.some((b) => b.id === targetExistingBillId)) {
+                                setTargetExistingBillId(unpaidBills[0].id);
+                              }
+                            } else {
+                              toast.info("No unpaid bills found for this customer. Creating a new bill.");
+                            }
+                          }}
+                          disabled={unpaidBills.length === 0}
+                          className={`px-3 py-1 rounded-md font-bold transition-all ${
+                            billingTargetMode === "EXISTING_BILL"
+                              ? "bg-amber-500 text-slate-950 shadow-sm"
+                              : unpaidBills.length === 0
+                              ? "opacity-50 cursor-not-allowed text-muted-foreground"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          Add to Existing Bill ({unpaidBills.length})
+                        </button>
+                      </div>
+                    </div>
+
+                    {billingTargetMode === "EXISTING_BILL" && unpaidBills.length > 0 && (
+                      <div className="flex items-center gap-2 flex-1 sm:justify-end">
+                        <span className="text-muted-foreground whitespace-nowrap">Target Bill:</span>
+                        <Select
+                          value={targetExistingBillId || (unpaidBills[0]?.id ?? "")}
+                          onValueChange={(val) => setTargetExistingBillId(val)}
+                        >
+                          <SelectTrigger className="h-8 text-xs bg-background w-full sm:w-64">
+                            <SelectValue placeholder="Select pending bill" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {unpaidBills.map((b) => {
+                              const due = Math.max(0, b.totalAmount - b.paidAmount);
+                              return (
+                                <SelectItem key={b.id} value={b.id}>
+                                  Bill #{b.billNumber} • Due: Rs. {due.toLocaleString()} (Total: Rs. {b.totalAmount.toLocaleString()})
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
 
                   {/* Menu Dish Quick Search & Categories */}
@@ -1251,45 +1377,64 @@ export default function CreditManagementPage() {
                     {/* Tray Summary & Submission */}
                     {orderTray.length > 0 && (
                       <div className="p-4 bg-muted/30 border-t space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                          <div>
-                            <Label className="text-[11px] text-muted-foreground">
-                              Discount (Rs.)
-                            </Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              value={purchaseDiscount}
-                              onChange={(e) => setPurchaseDiscount(e.target.value)}
-                              placeholder="0"
-                              className="h-8 text-xs font-mono mt-1"
-                            />
-                          </div>
+                        {billingTargetMode === "NEW_BILL" ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                            <div>
+                              <Label className="text-[11px] text-muted-foreground">
+                                Discount (Rs.)
+                              </Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={purchaseDiscount}
+                                onChange={(e) => setPurchaseDiscount(e.target.value)}
+                                placeholder="0"
+                                className="h-8 text-xs font-mono mt-1"
+                              />
+                            </div>
 
-                          <div>
-                            <Label className="text-[11px] text-muted-foreground">
-                              Due Date (Optional)
-                            </Label>
-                            <Input
-                              type="date"
-                              value={purchaseDueDate}
-                              onChange={(e) => setPurchaseDueDate(e.target.value)}
-                              className="h-8 text-xs mt-1"
-                            />
-                          </div>
+                            <div>
+                              <Label className="text-[11px] text-muted-foreground">
+                                Due Date (Optional)
+                              </Label>
+                              <Input
+                                type="date"
+                                value={purchaseDueDate}
+                                onChange={(e) => setPurchaseDueDate(e.target.value)}
+                                className="h-8 text-xs mt-1"
+                              />
+                            </div>
 
-                          <div>
-                            <Label className="text-[11px] text-muted-foreground">
-                              Bill Note (Optional)
-                            </Label>
-                            <Input
-                              value={purchaseNotes}
-                              onChange={(e) => setPurchaseNotes(e.target.value)}
-                              placeholder="e.g. Dinner with friends"
-                              className="h-8 text-xs mt-1"
-                            />
+                            <div>
+                              <Label className="text-[11px] text-muted-foreground">
+                                Bill Note (Optional)
+                              </Label>
+                              <Input
+                                value={purchaseNotes}
+                                onChange={(e) => setPurchaseNotes(e.target.value)}
+                                placeholder="e.g. Dinner with friends"
+                                className="h-8 text-xs mt-1"
+                              />
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs flex items-center justify-between">
+                            <div>
+                              <span className="font-semibold text-amber-700 dark:text-amber-300 block">
+                                Appending Items to Existing Credit Bill
+                              </span>
+                              <span className="text-[11px] text-muted-foreground">
+                                Adding to:{" "}
+                                <strong className="font-mono text-foreground">
+                                  #{unpaidBills.find((b) => b.id === targetExistingBillId)?.billNumber || "Selected Bill"}
+                                </strong>
+                              </span>
+                            </div>
+                            <Badge variant="outline" className="text-[11px] bg-background">
+                              Direct Bill Append
+                            </Badge>
+                          </div>
+                        )}
 
                         {/* Error or Success Alerts */}
                         {purchaseError && (
@@ -1309,7 +1454,7 @@ export default function CreditManagementPage() {
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t">
                           <div>
                             <span className="text-[11px] text-muted-foreground block">
-                              New Bill Total
+                              {billingTargetMode === "EXISTING_BILL" ? "Added Items Total" : "New Bill Total"}
                             </span>
                             <span className="text-xl font-black font-mono text-amber-500">
                               Rs. {trayTotal.toLocaleString()}
@@ -1324,7 +1469,9 @@ export default function CreditManagementPage() {
                             <CheckCircle2 className="w-4 h-4" />
                             {submittingPurchase
                               ? "Saving to Credit..."
-                              : `Save to Credit Bill (Rs. ${trayTotal.toLocaleString()})`}
+                              : billingTargetMode === "EXISTING_BILL"
+                              ? `Add Items to Bill #${unpaidBills.find((b) => b.id === targetExistingBillId)?.billNumber || ""} (+Rs. ${trayTotal.toLocaleString()})`
+                              : `Save New Credit Bill (Rs. ${trayTotal.toLocaleString()})`}
                           </Button>
                         </div>
                       </div>
@@ -1465,6 +1612,26 @@ export default function CreditManagementPage() {
                                     <Edit3 className="w-3 h-3" />
                                     Edit
                                   </Button>
+
+                                  {/* Add Items to this existing bill */}
+                                  {!isPaid && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setBillingTargetMode("EXISTING_BILL");
+                                        setTargetExistingBillId(bill.id);
+                                        const el = document.getElementById("order-menu-section");
+                                        el?.scrollIntoView({ behavior: "smooth" });
+                                        toast.info(`Selected Bill #${bill.billNumber} to add items`);
+                                      }}
+                                      className="h-8 text-xs gap-1 border-amber-500/40 text-amber-600 dark:text-amber-400 font-semibold hover:bg-amber-500/10"
+                                      title="Add items to this existing bill"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                      Add Items
+                                    </Button>
+                                  )}
 
                                   {/* Pay Bill */}
                                   {!isPaid && (

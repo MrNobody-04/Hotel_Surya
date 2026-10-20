@@ -408,4 +408,45 @@ export interface CreditDashboardMetricsDTO {
   recentAdjustments?: CreditAdjustmentDTO[];
 }
 
+export interface CompanyDTO {
+  id: string;
+  name: string;
+  contactPerson?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  totalReceived: number;
+  paymentsCount: number;
+  lastPaymentDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  payments?: CompanyPaymentDTO[];
+}
+
+export interface CompanyPaymentDTO {
+  id: string;
+  receiptNumber: string;
+  companyId: string;
+  company?: {
+    id: string;
+    name: string;
+    contactPerson?: string | null;
+    phone?: string | null;
+  } | null;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  paymentDate: string;
+  referenceNumber?: string | null;
+  purpose?: string | null;
+  notes?: string | null;
+  recordedById?: string | null;
+  recordedBy?: {
+    id: string;
+    name: string;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 

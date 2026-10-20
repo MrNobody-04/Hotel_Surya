@@ -23,12 +23,6 @@ async function main() {
     }
   }
 
-  // Ensure 102 is AVAILABLE if it was used in test
-  await prisma.room.updateMany({
-    where: { roomNumber: "102" },
-    data: { status: "AVAILABLE" },
-  });
-
   const users = await prisma.user.findMany();
   console.log("Verified database users:", users.map((u) => ({ email: u.email, role: u.role, name: u.name })));
 }

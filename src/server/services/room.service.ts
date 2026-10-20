@@ -3,7 +3,7 @@ import { RoomStatus, RoomType } from "@/types";
 import { calculateStayBill } from "./billing.service";
 
 export async function getAllRooms(filters?: { type?: RoomType; status?: RoomStatus }) {
-  const where: any = {};
+  const where: any = { isArchived: false };
   if (filters?.type) where.type = filters.type;
   if (filters?.status) where.status = filters.status;
 

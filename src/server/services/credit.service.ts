@@ -302,6 +302,145 @@ export async function createCreditPurchase(
 }
 
 /**
+ * Add items to an existing unpaid credit bill (append items directly to existing credit)
+ */
+export async function addItemsToExistingCreditBill(
+  billId: string,
+  items: CreateCreditItemInput[],
+  userId: string,
+  userName: string
+) {
+  if (!items || items.length === 0) {
+    throw new Error("At least one menu or custom item is required");
+  }
+
+  // Validate items
+  for (const item of items) {
+    if (!item.name || !item.name.trim()) {
+      throw new Error("Item name cannot be empty");
+    }
+    if (typeof item.quantity !== "number" || item.quantity <= 0) {
+      throw new Error(`Invalid quantity for "${item.name}". Must be at least 1.`);
+    }
+    if (typeof item.unitPrice !== "number" || item.unitPrice < 0) {
+      throw new Error(`Invalid price for "${item.name}". Price cannot be negative.`);
+    }
+  }
+
+  const addedSubtotal = Math.round(
+    items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0) * 100
+  ) / 100;
+
+  return prisma.$transaction(async (tx) => {
+    const bill = await tx.creditBill.findUnique({
+      where: { id: billId },
+      include: {
+        account: true,
+        customer: true,
+      },
+    });
+
+    if (!bill) {
+      throw new Error("Credit bill not found");
+    }
+
+    if (bill.status === "PAID") {
+      throw new Error("Cannot add items to an already settled bill. Please create a new credit bill instead.");
+    }
+
+    // 1. Create the new items for this bill
+    await tx.creditBillItem.createMany({
+      data: items.map((item) => ({
+        billId: bill.id,
+        serviceItemId: item.serviceItemId || null,
+        name: item.name.trim(),
+        category: item.category?.trim() || null,
+        quantity: Math.floor(item.quantity),
+        unitPrice: item.unitPrice,
+        total: Math.round(item.quantity * item.unitPrice * 100) / 100,
+        originalPrice: item.originalPrice !== undefined ? item.originalPrice : null,
+        isCustom: Boolean(item.isCustom),
+        notes: item.notes?.trim() || null,
+      })),
+    });
+
+    // 2. Update Bill totals
+    const newBillSubtotal = Math.round((bill.subtotal + addedSubtotal) * 100) / 100;
+    const newBillTotal = Math.round((bill.totalAmount + addedSubtotal) * 100) / 100;
+    const remainingDue = Math.max(0, Math.round((newBillTotal - bill.paidAmount) * 100) / 100);
+
+    const updatedBill = await tx.creditBill.update({
+      where: { id: bill.id },
+      data: {
+        subtotal: newBillSubtotal,
+        totalAmount: newBillTotal,
+        status: remainingDue > 0 ? (bill.paidAmount > 0 ? ("PARTIALLY_PAID" as any) : ("PENDING" as any)) : ("PAID" as any),
+      },
+      include: {
+        items: true,
+        customer: {
+          select: { id: true, fullName: true, contactNumber: true },
+        },
+      },
+    });
+
+    // 3. Update CreditAccount balance
+    const account = bill.account;
+    const previousBalance = account.currentBalance;
+    const newBalance = Math.round((previousBalance + addedSubtotal) * 100) / 100;
+    const newTotalCharged = Math.round((account.totalCharged + addedSubtotal) * 100) / 100;
+
+    const updatedAccount = await tx.creditAccount.update({
+      where: { id: account.id },
+      data: {
+        totalCharged: newTotalCharged,
+        currentBalance: newBalance,
+        status: newBalance > 0 ? ("PENDING" as any) : ("PAID" as any),
+      },
+    });
+
+    // 4. Create Ledger Entry (CHARGE)
+    await tx.creditLedgerEntry.create({
+      data: {
+        accountId: account.id,
+        type: "CHARGE" as any,
+        amount: addedSubtotal,
+        debit: addedSubtotal,
+        credit: 0,
+        runningBalance: newBalance,
+        description: `Added ${items.length} item(s) to Bill #${bill.billNumber}`,
+        referenceId: bill.id,
+        referenceNumber: bill.billNumber,
+        createdById: userId,
+      },
+    });
+
+    // 5. Audit Log
+    await logAuditEvent({
+      userId,
+      userName,
+      action: "CREDIT_BILL_ITEMS_ADDED",
+      entity: "CreditBill",
+      entityId: bill.id,
+      metadata: {
+        billNumber: bill.billNumber,
+        customerId: bill.customerId,
+        addedAmount: addedSubtotal,
+        newBillTotal,
+        previousBalance,
+        newBalance,
+        itemsCount: items.length,
+      },
+    });
+
+    return {
+      bill: updatedBill,
+      account: updatedAccount,
+    };
+  });
+}
+
+/**
  * Edit a saved credit bill with financial adjustment tracking and audit preservation
  */
 export async function editCreditBill(

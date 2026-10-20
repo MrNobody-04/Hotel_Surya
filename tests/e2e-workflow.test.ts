@@ -23,11 +23,11 @@ describe("Critical Hotel Surya End-to-End Operational Workflow", { timeout: 3000
       });
     }
 
-    // Ensure Room 102 (AC) is available
-    testRoom = await prisma.room.findUnique({ where: { roomNumber: "102" } });
+    // Ensure isolated test room 999 (AC) is used so production rooms are never affected
+    testRoom = await prisma.room.findUnique({ where: { roomNumber: "999" } });
     if (!testRoom) {
       testRoom = await prisma.room.create({
-        data: { roomNumber: "102", type: "AC", status: "AVAILABLE" },
+        data: { roomNumber: "999", type: "AC", status: "AVAILABLE" },
       });
     } else {
       await prisma.room.update({
@@ -36,12 +36,16 @@ describe("Critical Hotel Surya End-to-End Operational Workflow", { timeout: 3000
       });
     }
 
-    // Clean any prior stays on 102
+    // Clean any prior stays on test room 999
     await prisma.stay.deleteMany({ where: { roomId: testRoom.id } });
   });
 
   afterAll(async () => {
-    // Cleanup if needed
+    // Clean up dummy test room 999
+    if (testRoom?.id) {
+      await prisma.stay.deleteMany({ where: { roomId: testRoom.id } });
+      await prisma.room.deleteMany({ where: { roomNumber: "999" } });
+    }
   });
 
   it("Step 1: Creates a new customer with optional accompanying guest info", async () => {

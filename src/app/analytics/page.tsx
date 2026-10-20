@@ -5,11 +5,13 @@ import {
   BarChart3,
   TrendingUp,
   TrendingDown,
-  DollarSign,
+  Banknote,
   PieChart as PieChartIcon,
   Calendar,
   Bed,
   Utensils,
+  Building2,
+  CreditCard,
   RefreshCw,
 } from "lucide-react";
 import {
@@ -94,7 +96,11 @@ export default function AnalyticsPage() {
     netOperationalResult = 0,
     hotelRevenue = 0,
     restaurantRevenue = 0,
+    creditRevenue = 0,
+    companyRevenue = 0,
     diningOrdersCount = 0,
+    creditPaymentsCount = 0,
+    companyPaymentsCount = 0,
     paymentsByMethod = {},
     roomUsageCount = {},
     topSellingItems = [],
@@ -155,13 +161,13 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Revenue Stream Breakdown (Hotel Rooms vs Restaurant & Cabins) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Revenue Stream Breakdown (Hotel Rooms, Cabins/Dining, Companies, Customer Credits) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <TiltCard variant="kpi" maxTilt={3.5} className="shadow-sm border-l-4 border-l-blue-500 bg-blue-50/20 dark:bg-blue-950/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs uppercase font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
               <Bed className="w-3.5 h-3.5" />
-              <span>🏨 Hotel Rooms Revenue</span>
+              <span>🏨 Hotel Rooms</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -178,7 +184,7 @@ export default function AnalyticsPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-xs uppercase font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
               <Utensils className="w-3.5 h-3.5" />
-              <span>🍽️ Restaurant & Cabins Revenue</span>
+              <span>🍽️ Restaurant & Cabins</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -191,28 +197,37 @@ export default function AnalyticsPage() {
           </CardContent>
         </TiltCard>
 
-        <TiltCard variant="kpi" maxTilt={3.5} className="shadow-sm border-l-4 border-l-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20">
+        <TiltCard variant="kpi" maxTilt={3.5} className="shadow-sm border-l-4 border-l-amber-500 bg-amber-50/20 dark:bg-amber-950/20">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs uppercase font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-              <DollarSign className="w-3.5 h-3.5" />
-              <span>💰 Total Combined Revenue</span>
+            <CardTitle className="text-xs uppercase font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5" />
+              <span>🏢 Company Payments</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
-              {formatCurrency(totalCollectedRevenue)}
+            <div className="text-2xl font-black font-mono text-foreground">
+              {formatCurrency(companyRevenue)}
             </div>
-            <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
-              <span>Cash: {formatCurrency(paymentsByMethod?.CASH || 0)}</span>
-              <span>•</span>
-              <span>QR: {formatCurrency((paymentsByMethod?.QR_PAYMENT || 0) + (paymentsByMethod?.QR_CODE || 0))}</span>
-              {(paymentsByMethod?.CARD || paymentsByMethod?.BANK_TRANSFER) ? (
-                <>
-                  <span>•</span>
-                  <span>Card/Bank: {formatCurrency((paymentsByMethod?.CARD || 0) + (paymentsByMethod?.BANK_TRANSFER || 0))}</span>
-                </>
-              ) : null}
+            <p className="text-xs text-muted-foreground mt-1">
+              From {companyPaymentsCount} corporate settlements
+            </p>
+          </CardContent>
+        </TiltCard>
+
+        <TiltCard variant="kpi" maxTilt={3.5} className="shadow-sm border-l-4 border-l-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs uppercase font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>💳 Customer Credits</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black font-mono text-foreground">
+              {formatCurrency(creditRevenue)}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              From {creditPaymentsCount} credit debt collections
+            </p>
           </CardContent>
         </TiltCard>
       </div>
@@ -229,7 +244,7 @@ export default function AnalyticsPage() {
             <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
               {formatCurrency(totalCollectedRevenue)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Hotel stays + Cabins/Dining</p>
+            <p className="text-xs text-muted-foreground mt-1">Rooms + Dining + Companies + Credits</p>
           </CardContent>
         </TiltCard>
 

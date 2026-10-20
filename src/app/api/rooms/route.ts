@@ -41,6 +41,26 @@ export async function POST(request: Request) {
       where: { roomNumber: String(roomNumber).trim() },
     });
     if (existing) {
+      if (existing.isArchived) {
+        const room = await prisma.room.update({
+          where: { id: existing.id },
+          data: {
+            isArchived: false,
+            type: type || existing.type,
+            status: "AVAILABLE",
+            notes: notes?.trim() || null,
+          },
+        });
+        await logAuditEvent({
+          userId: user.id,
+          userName: user.name,
+          action: "ROOM_CREATED",
+          entity: "Room",
+          entityId: room.id,
+          metadata: { roomNumber: room.roomNumber, unarchived: true },
+        });
+        return NextResponse.json({ room }, { status: 201 });
+      }
       return NextResponse.json({ error: "Room number already exists" }, { status: 400 });
     }
 

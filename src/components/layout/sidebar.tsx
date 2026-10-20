@@ -20,6 +20,7 @@ import {
   Utensils,
   QrCode,
   CreditCard,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SessionUser } from "@/types";
@@ -85,6 +86,12 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
     {
       title: "Finance & Records",
       items: [
+        {
+          label: "Company Payments",
+          href: "/company",
+          icon: Building2,
+          show: true,
+        },
         {
           label: "Credit Management",
           href: "/credits",
