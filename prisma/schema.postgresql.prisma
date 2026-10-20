@@ -91,6 +91,7 @@ model User {
   creditPayments     CreditPayment[]     @relation("CreditPaymentRecordedBy")
   creditLedgers      CreditLedgerEntry[] @relation("CreditLedgerCreatedBy")
   creditAdjustments  CreditAdjustment[]  @relation("CreditAdjustmentCreatedBy")
+  companyPayments    CompanyPayment[]    @relation("CompanyPaymentRecordedBy")
 
   @@index([email])
 }
@@ -101,6 +102,7 @@ model Room {
   type       RoomType   @default(NON_AC)
   status     RoomStatus @default(AVAILABLE)
   notes      String?
+  isArchived Boolean    @default(false)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
@@ -108,6 +110,7 @@ model Room {
 
   @@index([roomNumber])
   @@index([status])
+  @@index([isArchived])
 }
 
 model Customer {
@@ -522,6 +525,45 @@ model CreditAdjustment {
   @@index([accountId])
   @@index([billId])
   @@index([createdAt])
+}
+
+model Company {
+  id            String           @id @default(cuid())
+  name          String           @unique
+  contactPerson String?
+  phone         String?
+  email         String?
+  address       String?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  payments      CompanyPayment[]
+
+  @@index([name])
+}
+
+model CompanyPayment {
+  id              String        @id @default(cuid())
+  receiptNumber   String        @unique
+  companyId       String
+  company         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  amount          Float
+  paymentMethod   PaymentMethod @default(CASH)
+  paymentDate     DateTime      @default(now())
+  referenceNumber String?
+  purpose         String?
+  notes           String?
+
+  recordedById    String?
+  recordedBy      User?         @relation("CompanyPaymentRecordedBy", fields: [recordedById], references: [id])
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([companyId])
+  @@index([paymentDate])
+  @@index([paymentMethod])
 }
 
 

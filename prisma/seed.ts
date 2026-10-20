@@ -30,10 +30,9 @@ async function main() {
 
   console.log("✅ Seeded Owner User (Krishna Gc)");
 
-  // 2. Seed Initial 7 Rooms (2 AC, 5 Non-AC)
+  // 2. Seed Initial Rooms
   const initialRooms = [
     { roomNumber: "101", type: "AC", status: "AVAILABLE", notes: "First floor, king bed, air conditioned" },
-    { roomNumber: "102", type: "AC", status: "AVAILABLE", notes: "First floor, queen bed, air conditioned" },
     { roomNumber: "103", type: "NON_AC", status: "AVAILABLE", notes: "First floor, standard twin beds" },
     { roomNumber: "104", type: "NON_AC", status: "AVAILABLE", notes: "First floor, double bed, mountain view" },
     { roomNumber: "105", type: "NON_AC", status: "AVAILABLE", notes: "Second floor, double bed" },
